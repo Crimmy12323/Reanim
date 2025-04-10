@@ -1412,10 +1412,9 @@ local function stopFakeAnimation()
         end
     end
 end
--- Variables to control the fake animation loop
 local fakeAnimRunning = false
 fakeAnimStop = false
-local fakeAnimSpeed = 1 -- Default speed (1.0 = 100%)
+local fakeAnimSpeed = 1.1 -- Default speed (1.0 = 100%)
 local function playFakeAnimation(animationId)
     if not ghostClone then
         warn("No fake character available!")
