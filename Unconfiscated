@@ -1196,3 +1196,32 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
         end
     end
 end)
+
+-- Initialization
+LocalPlayer = Players.LocalPlayer
+
+-- Monitor character reset and force disable reanimation
+LocalPlayer.CharacterAdded:Connect(function(character)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if humanoid then
+        humanoid.Died:Connect(function()
+            if ghostEnabled then
+                -- Delay the reset process
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false) -- Temporarily disable the Dead state
+                task.delay(0.5, function() -- Delay for 0.5 seconds
+                    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true) -- Re-enable the Dead state
+                    humanoid:TakeDamage(humanoid.MaxHealth)
+                end)
+
+                -- Turn off reanimation
+                setGhostEnabled(false)
+                local toggleButton = gui:FindFirstChild("ToggleButton", true)
+                if toggleButton then
+                    toggleButton.Text = "Enable Reanimation"
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+                end
+                warn("Reanimation disabled before character reset.")
+            end
+        end)
+    end
+end)
