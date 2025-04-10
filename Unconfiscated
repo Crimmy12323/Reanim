@@ -5,7 +5,7 @@ RunService = game:GetService("RunService")
 ReplicatedStorage = game:GetService("ReplicatedStorage")
 TweenService = game:GetService("TweenService")
 LocalPlayer = Players.LocalPlayer
-HttpService = game:GetService("HttpService") -- Get HttpService for JSON
+HttpService = game:GetService("HttpService")
 
 -- Variables for state storage
 local ghostEnabled = false
@@ -34,89 +34,8 @@ local bodyParts = {
 "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
 "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }
--- NEW: Table to store favorite animations (by name)
-local favoriteAnimations = {}
 -- NEW: Table to store keybinds for animations (animation name -> KeyCode)
 local animationKeybinds = {}
-
--- Function to save favorite animations to a file
-local function saveFavorites()
-    local success, encodedFavorites = pcall(HttpService.JSONEncode, HttpService, favoriteAnimations)
-    if success then
-        if writefile then
-            local saveSuccess, errorMessage = pcall(function()
-                writefile("favorite_animations.json", encodedFavorites)
-            end)
-            if not saveSuccess then
-                warn("Error saving favorites:", errorMessage)
-            end
-        else
-            warn("File system functions not supported in this environment")
-        end
-    else
-        warn("Error encoding favorites:", encodedFavorites)
-    end
-end
-
--- Function to load favorite animations from a file
-local function loadFavorites()
-    local success, fileContent = pcall(readfile, "favorite_animations.json")
-    if success then
-        local decodeSuccess, decodedFavorites = pcall(function()
-            return HttpService:JSONDecode(fileContent)
-        end)
-        if decodeSuccess and typeof(decodedFavorites) == "table" then
-            favoriteAnimations = decodedFavorites
-            print("Favorites loaded successfully.")
-        else
-            warn("Error decoding favorites:", decodedFavorites)
-            favoriteAnimations = {}
-        end
-    else
-        warn("No favorites file found, starting with empty favorites")
-        favoriteAnimations = {}
-    end
-end
-
--- NEW: Function to save animation keybinds to a file
-local function saveKeybinds()
-    local keybindsToSave = {}
-    for animName, keyCode in pairs(animationKeybinds) do
-        keybindsToSave[animName] = keyCode.Name -- Save KeyCode as String
-    end
-    local success, encodedKeybinds = pcall(HttpService:JSONEncode(keybindsToSave))
-    if success then
-        local saveSuccess, errorMessage = pcall(function()
-            writefile("animation_keybinds.json", encodedKeybinds) -- Changed to writefile and new filename
-        end)
-        if not saveSuccess then
-            warn("Error saving keybinds:", errorMessage)
-        end
-    else
-        warn("Error encoding keybinds:", encodedKeybinds)
-    end
-end
-
--- NEW: Function to load animation keybinds from a file
-local function loadKeybinds()
-    local success, fileContent = pcall(readfile, "animation_keybinds.json")
-    if success then
-        local decodeSuccess, decodedKeybinds = pcall(HttpService:JSONDecode(fileContent))
-        if decodeSuccess and typeof(decodedKeybinds) == "table" then
-            for animName, keyName in pairs(decodedKeybinds) do
-                animationKeybinds[animName] = Enum.KeyCode[keyName] -- Convert String back to KeyCode
-            end
-            print("Keybinds loaded successfully.")
-        else
-            warn("Error decoding keybinds:", decodedKeybinds)
-            animationKeybinds = {}
-        end
-    else
-        warn("No keybinds file found, starting with empty keybinds:", fileContent)
-        animationKeybinds = {}
-    end
-end
-
 
 -- Helper function to scale a CFrame uniformly (keeps rotation)
 local function scaleCFrame(cf, scale)
@@ -169,7 +88,6 @@ local function restoreGuis()
     table.clear(preservedGuis)
 end
 
--- Function to update the clone’s scale using both cloneSize (uniform scaling)
 -- and cloneWidth (extra scaling only on the X-axis).
 local function updateCloneScale()
     if not ghostClone then return end
@@ -551,375 +469,6 @@ local function playFakeAnimation(animationId)
     end
 -- End of Fake Animation Section
 
--- NEW: Function to update Keybind Button Text
-local function updateKeybindButtonText(animButtonData, animName)
-    local keybind = animationKeybinds[animName]
-    if keybind then
-        animButtonData.KeybindButton.Text = keybind.Name -- Display KeyCode Name
-    else
-        animButtonData.KeybindButton.Text = "Key"
-    end
-end
-
-
--- Function to create the separate Animation List GUI
-local function createAnimationListGui(animTextBox)
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "AnimationListGui"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    loadFavorites() -- Load favorites when GUI is created
-    loadKeybinds() -- Load keybinds when GUI is created
-
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 330, 0, 400) -- Less wide here, changed from `UDim2.new(0, 350, 0, 400)` to `UDim2.new(0, 330, 0, 400)`
-    mainFrame.Position = UDim2.new(0.75, -175, 0.5, -200) -- Position to the right of main GUI
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    mainFrame.BorderSizePixel = 0
-    local uiCorner = Instance.new("UICorner") -- Rounded corner for mainFrame
-    uiCorner.CornerRadius = UDim.new(0, 10)
-    uiCorner.Parent = mainFrame
-    mainFrame.Parent = screenGui
-
-    local titleBar = Instance.new("Frame")
-    titleBar.Name = "TitleBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 50) -- Increased height of titleBar here
-    titleBar.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-    titleBar.BorderSizePixel = 0
-    local titleCorner = Instance.new("UICorner") -- Rounded corner for titleBar
-    titleCorner.CornerRadius = UDim.new(0, 10)
-    titleCorner.Parent = titleBar
-    titleBar.Parent = mainFrame
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Name = "Title"
-    titleLabel.Size = UDim2.new(1, -50, 1, 0)
-    titleLabel.Position = UDim2.new(0, 25, 0, 0)
-    titleLabel.Text = "Animation List"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 18
-    titleLabel.Font = Enum.Font.GothamSemibold
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = titleBar
-
-    -- Close Button
-    local closeButton = Instance.new("TextButton")
-    closeButton.Name = "CloseButton"
-    closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Position = UDim2.new(1, -35, 0, 10) -- Adjusted position to be vertically centered in the wider title bar
-    closeButton.Text = ""
-    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeButton.TextSize = 18
-    closeButton.Font = Enum.Font.GothamSemibold
-    closeButton.BackgroundColor3 = Color3.fromRGB(255, 85, 85)
-    closeButton.BackgroundTransparency = 0.5
-    closeButton.AutoButtonColor = true
-    local closeCorner = Instance.new("UICorner") -- Rounded corner for closeButton
-    closeCorner.CornerRadius = UDim.new(0, 8)
-    closeCorner.Parent = closeButton
-    closeButton.Parent = titleBar
-
-    closeButton.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
-    end)
-
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Name = "Content"
-    contentFrame.Size = UDim2.new(1, -20, 1, -60) -- Adjusted height to account for wider title bar
-    contentFrame.Position = UDim2.new(0, 10, 0, 55) -- Adjusted position to account for wider title bar
-    contentFrame.BackgroundTransparency = 1
-    contentFrame.Parent = mainFrame
-
-    -- ADDED: Search TextBox
-    local animSearchTextBox = Instance.new("TextBox")
-    animSearchTextBox.Name = "AnimSearchTextBox"
-    animSearchTextBox.Text = ""
-    animSearchTextBox.Size = UDim2.new(1, 0, 0, 30)
-    animSearchTextBox.Position = UDim2.new(0, 0, 0, 0)
-    animSearchTextBox.PlaceholderText = "Search Animations..."
-    animSearchTextBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    animSearchTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-    animSearchTextBox.ClearTextOnFocus = false
-    local animSearchTextBoxCorner = Instance.new("UICorner") -- Rounded corner for animSearchTextBox
-    animSearchTextBoxCorner.CornerRadius = UDim.new(0, 6)
-    animSearchTextBoxCorner.Parent = animSearchTextBox
-    animSearchTextBox.Parent = contentFrame
-
-    local animScrollFrame = Instance.new("ScrollingFrame")
-    animScrollFrame.Name = "AnimScrollFrame"
-    animScrollFrame.Size = UDim2.new(1, 0, 1, -40) -- Take up remaining space
-    animScrollFrame.Position = UDim2.new(0, 0, 0, 35)
-    animScrollFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    animScrollFrame.BorderSizePixel = 0
-    animScrollFrame.ScrollBarThickness = 6
-    animScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    local scrollFrameCorner = Instance.new("UICorner") -- Rounded corner for animScrollFrame
-    scrollFrameCorner.CornerRadius = UDim.new(0, 6)
-    scrollFrameCorner.Parent = animScrollFrame
-    animScrollFrame.Parent = contentFrame
-
-    -- Table to store animation buttons for search functionality
-    local animationButtons = {}
-    local keybindInputActive = false
-    local currentAnimationForKeybind = nil
-
-    -- Function to update animation button visibility based on search text and favorites
-    local function updateAnimationButtonsVisibility(searchText)
-        local yOffset = 5
-        local visibleButtonCount = 0
-
-        -- Sort animations: Favorites first, then alphabetically
-        local sortedAnimationNames = {}
-        local favoriteNames = {}
-        local nonFavoriteNames = {}
-
-        for animName in pairs(BuiltInAnimationsR15) do
-            if favoriteAnimations[animName] then
-                table.insert(favoriteNames, animName)
-            else
-                table.insert(nonFavoriteNames, animName)
-            end
-        end
-        table.sort(favoriteNames)
-        table.sort(nonFavoriteNames)
-        for _, name in ipairs(favoriteNames) do
-            table.insert(sortedAnimationNames, name)
-        end
-        for _, name in ipairs(nonFavoriteNames) do
-            table.insert(sortedAnimationNames, name)
-        end
-
-
-        for _, animName in ipairs(sortedAnimationNames) do -- Iterate through sorted names
-            local animButtonData = animationButtons[animName]
-            if not animButtonData then continue end -- Safety check
-
-            if string.find(string.lower(animName), string.lower(searchText)) then
-                animButtonData.NameButton.Visible = true
-                animButtonData.PlayButton.Visible = true
-                animButtonData.FavoriteButton.Visible = true -- Show Favorite Button
-                animButtonData.StopButton.Visible = true -- Show Stop Button
-                animButtonData.KeybindButton.Visible = true -- Show Keybind Button
-                animButtonData.NameButton.Position = UDim2.new(0, 5, 0, yOffset)
-                animButtonData.PlayButton.Position = UDim2.new(0, 5, 0, yOffset + 30)
-                animButtonData.FavoriteButton.Position = UDim2.new(1, -125, 0, yOffset) -- Position Favorite button right of NameButton - Adjusted for wider Keybind button, changed from `UDim2.new(1, -145, 0, yOffset)` to `UDim2.new(1, -125, 0, yOffset)`
-                animButtonData.StopButton.Position = UDim2.new(1, -85, 0, yOffset) -- Position Stop button right of Favorite Button - Adjusted for wider Keybind button, changed from `UDim2.new(1, -105, 0, yOffset)` to `UDim2.new(1, -85, 0, yOffset)`
-                animButtonData.KeybindButton.Position = UDim2.new(1, -45, 0, yOffset) -- Position Keybind button right of Stop Button - Adjusted for wider Keybind button, changed from `UDim2.new(1, -65, 0, yOffset)` to `UDim2.new(1, -45, 0, yOffset)`
-                yOffset = yOffset + 65
-                visibleButtonCount = visibleButtonCount + 1
-
-                -- Highlight favorite animations visually
-                if favoriteAnimations[animName] then
-                    animButtonData.NameButton.BackgroundColor3 = Color3.fromRGB(80, 70, 90) -- Different background for favorites
-                else
-                    animButtonData.NameButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-                end
-                updateKeybindButtonText(animButtonData, animName) -- Update Keybind Button Text
-
-            else
-                animButtonData.NameButton.Visible = false
-                animButtonData.PlayButton.Visible = false
-                animButtonData.FavoriteButton.Visible = false -- Hide Favorite Button too
-                animButtonData.StopButton.Visible = false -- Hide Stop Button too
-                animButtonData.KeybindButton.Visible = false -- Hide Keybind Button too
-            end
-        end
-        animScrollFrame.CanvasSize = UDim2.new(0, 0, 0, math.max(0, yOffset - 60 + 5))
-    end
-
-    -- Create buttons for each animation in the BuiltInAnimationsR15 table
-    for animName, animId in pairs(BuiltInAnimationsR15) do
-        local animNameButton = Instance.new("TextButton")
-        animNameButton.Name = animName .. "NameButton"
-        animNameButton.Size = UDim2.new(1, -80, 0, 30) -- Wider button for title - Adjusted for wider Keybind button - Changed here from `UDim2.new(1, -100, 0, 30)` to `UDim2.new(1, -80, 0, 30)`
-        animNameButton.Position = UDim2.new(0, 5, 0, 5) -- Initial position, updated by search function
-        animNameButton.Text = animName
-        animNameButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        animNameButton.TextSize = 14
-        animNameButton.Font = Enum.Font.GothamMedium
-        animNameButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-        animNameButton.BorderSizePixel = 0
-        animNameButton.TextXAlignment = Enum.TextXAlignment.Center -- Centered Text Here
-        local buttonCorner = Instance.new("UICorner") -- Rounded corner for animNameButton
-        buttonCorner.CornerRadius = UDim.new(0, 4)
-        buttonCorner.Parent = animNameButton
-        animNameButton.Parent = animScrollFrame
-
-        -- When clicked, set the animation ID in the textbox of the main GUI
-        animNameButton.MouseButton1Click:Connect(function()
-            animTextBox.Text = tostring(animId)
-        end)
-
-        -- Play Animation Button
-        local playAnimButton = Instance.new("TextButton")
-        playAnimButton.Name = animName .. "PlayButton"
-        playAnimButton.Size = UDim2.new(1, -10, 0, 30) -- Same size as name button for now
-        playAnimButton.Position = UDim2.new(0, 5, 0, 35) -- Position below the name button
-        playAnimButton.Text = "Play" -- Shorter text
-        playAnimButton.TextColor3 = Color3.fromRGB(200, 200, 200) -- Slightly different color
-        playAnimButton.TextSize = 12 -- Smaller text size
-        playAnimButton.Font = Enum.Font.GothamMedium
-        playAnimButton.BackgroundColor3 = Color3.fromRGB(70, 70, 80) -- Slightly darker background
-        playAnimButton.BorderSizePixel = 0
-        local playButtonCorner = Instance.new("UICorner")
-        playButtonCorner.CornerRadius = UDim.new(0, 4)
-        playButtonCorner.Parent = playAnimButton
-        playAnimButton.Parent = animScrollFrame
-
-        playAnimButton.MouseButton1Click:Connect(function()
-            playFakeAnimation(tostring(animId)) -- Call playFakeAnimation with the ID
-        end)
-
-        -- Favorite Animation Button
-        local favoriteAnimButton = Instance.new("TextButton")
-        favoriteAnimButton.Name = animName .. "FavoriteButton"
-        favoriteAnimButton.Size = UDim2.new(0, 40, 0, 30) -- Smaller button for favorite
-        favoriteAnimButton.Position = UDim2.new(1, -125, 0, 5) -- Position Favorite button right of NameButton - Adjusted for wider Keybind button, changed from `UDim2.new(1, -145, 0, 5)` to `UDim2.new(1, -125, 0, 5)`
-        favoriteAnimButton.Text = favoriteAnimations[animName] and "★" or "☆" -- Filled star if favorite, otherwise empty
-        favoriteAnimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        favoriteAnimButton.TextSize = 20
-        favoriteAnimButton.Font = Enum.Font.GothamBold
-        favoriteAnimButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-        favoriteAnimButton.BorderSizePixel = 0
-        local favoriteButtonCorner = Instance.new("UICorner")
-        favoriteButtonCorner.CornerRadius = UDim.new(0, 4)
-        favoriteButtonCorner.Parent = favoriteAnimButton
-        favoriteAnimButton.Parent = animScrollFrame
-
-        favoriteAnimButton.MouseButton1Click:Connect(function()
-            if favoriteAnimations[animName] then
-                favoriteAnimations[animName] = nil -- Remove from favorites
-            else
-                favoriteAnimations[animName] = true -- Add to favorites
-            end
-            favoriteAnimButton.Text = favoriteAnimations[animName] and "★" or "☆" -- Update button text
-            updateAnimationButtonsVisibility(animSearchTextBox.Text) -- Refresh list to re-sort
-            saveFavorites() -- Save favorites after change
-        end)
-
-        -- Stop Animation Button
-        local stopAnimButton = Instance.new("TextButton")
-        stopAnimButton.Name = animName .. "StopButton"
-        stopAnimButton.Size = UDim2.new(0, 40, 0, 30) -- Smaller button for stop
-        stopAnimButton.Position = UDim2.new(1, -85, 0, 5) -- Position Stop button right of Favorite Button - Adjusted for wider Keybind button, changed from `UDim2.new(1, -105, 0, 5)` to `UDim2.new(1, -85, 0, 5)`
-        stopAnimButton.Text = "🛑"
-        stopAnimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        stopAnimButton.TextSize = 16
-        stopAnimButton.Font = Enum.Font.GothamBold
-        stopAnimButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-        stopAnimButton.BorderSizePixel = 0
-        local stopButtonCorner = Instance.new("UICorner")
-        stopButtonCorner.CornerRadius = UDim.new(0, 4)
-        stopButtonCorner.Parent = stopAnimButton
-        stopAnimButton.Parent = animScrollFrame
-
-        stopAnimButton.MouseButton1Click:Connect(function()
-            stopFakeAnimation() -- Call stopFakeAnimation function
-        end)
-
-        -- NEW: Keybind Animation Button
-        local keybindAnimButton = Instance.new("TextButton")
-        keybindAnimButton.Name = animName .. "KeybindButton"
-        keybindAnimButton.Size = UDim2.new(0, 40, 0, 30) -- Wider button for keybind - Increased width here, changed from `UDim2.new(0, 60, 0, 30)` to `UDim2.new(0, 40, 0, 30)`
-        keybindAnimButton.Position = UDim2.new(1, -45, 0, 5) -- Position Keybind button right of Stop Button - Adjusted for wider Keybind button, changed from `UDim2.new(1, -65, 0, 5)` to `UDim2.new(1, -45, 0, 5)`
-        keybindAnimButton.Text = "Set Keybind" -- Initial text
-        keybindAnimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        keybindAnimButton.TextSize = 12
-        keybindAnimButton.Font = Enum.Font.GothamMedium
-        keybindAnimButton.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
-        keybindAnimButton.BorderSizePixel = 0
-        local keybindButtonCorner = Instance.new("UICorner")
-        keybindButtonCorner.CornerRadius = UDim.new(0, 4)
-        keybindButtonCorner.Parent = keybindAnimButton
-        keybindAnimButton.Parent = animScrollFrame
-
-        keybindAnimButton.MouseButton1Click:Connect(function()
-            if keybindInputActive then return end -- Prevent overlapping keybind inputs
-            keybindInputActive = true
-            currentAnimationForKeybind = animName
-            keybindAnimButton.Text = "Press" -- Prompt user to press a key
-
-            local function inputBeganHandler(input, gameProcessedEvent)
-                if not keybindInputActive or currentAnimationForKeybind ~= animName then return end
-                if input.UserInputType == Enum.UserInputType.Keyboard then
-                    animationKeybinds[animName] = input.KeyCode
-                    saveKeybinds()
-                    updateKeybindButtonText(animationButtons[animName], animName)
-                    keybindInputActive = false
-                    currentAnimationForKeybind = nil
-                    UserInputService.InputBegan:Disconnect(inputBeganHandler) -- Disconnect after setting keybind
-                elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    -- Allow canceling keybind setting by clicking away
-                    updateKeybindButtonText(animationButtons[animName], animName) -- Revert text
-                    keybindInputActive = false
-                    currentAnimationForKeybind = nil
-                    UserInputService.InputBegan:Disconnect(inputBeganHandler)
-                end
-            end
-
-            UserInputService.InputBegan:Connect(inputBeganHandler)
-        end)
-
-
-        animationButtons[animName] = {
-            NameButton = animNameButton,
-            PlayButton = playAnimButton,
-            FavoriteButton = favoriteAnimButton,
-            StopButton = stopAnimButton,
-            KeybindButton = keybindAnimButton -- NEW: Keybind Button
-        }
-    end
-
-    -- Initially update button visibility to show all animations
-    updateAnimationButtonsVisibility("")
-
-    -- Update button visibility when search text changes
-    animSearchTextBox:GetPropertyChangedSignal("Text"):Connect(function()
-        updateAnimationButtonsVisibility(animSearchTextBox.Text)
-    end)
-
-    -- Drag functionality for the Animation List GUI
-    local dragging = false
-    local dragInput, dragStart, startPos
-    local function updateInput(input)
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = mainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    titleBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input == dragInput) then
-            updateInput(input)
-        end
-    end)
-
-    return screenGui
-end
-
-local animationListGui = nil -- Variable to track if animation list is open
-
 -- Creates a draggable GUI with a compact layout.
 local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, setSizeValue, getWidthValue, setWidthValue)
     local screenGui = Instance.new("ScreenGui")
@@ -929,20 +478,25 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
-    mainFrame.Size = UDim2.new(0, 350, 0, 250)  -- Increased height to accommodate speed slider
+    mainFrame.Size = UDim2.new(0, 450, 0, 230)  -- Increased height to accommodate speed slider
     mainFrame.Position = UDim2.new(0.5, -175, 0.5, -225)  -- Adjusted position for taller size
     mainFrame.BackgroundColor3 = Color3.fromRGB(16,12,12)
     mainFrame.BorderSizePixel = 0
     mainFrame.BackgroundTransparency = 0
-    local uiCorner = Instance.new("UICorner") -- Rounded corner for mainFrame
+    local uiStroke = Instance.new("UIStroke")
+    uiStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border  -- Apply stroke to the border
+    uiStroke.Color = Color3.fromRGB(128, 128, 128)  -- Set the stroke color (white in this case)
+    uiStroke.Thickness = 1  -- Set the thickness of the stroke
+    uiStroke.Parent = mainFrame
+    local uiCorner = Instance.new("UICorner")
     uiCorner.CornerRadius = UDim.new(0, 10)
     uiCorner.Parent = mainFrame
     mainFrame.Parent = screenGui
-
+    
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
     titleBar.Size = UDim2.new(1, 0, 0, 40)
-    titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    titleBar.BackgroundColor3 = Color3.fromRGB(16,12,12)
     titleBar.BorderSizePixel = 0
     local titleCorner = Instance.new("UICorner") -- Rounded corner for titleBar
     titleCorner.CornerRadius = UDim.new(0, 10)
@@ -953,7 +507,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     titleBarBottom.Name = "BottomEdge"
     titleBarBottom.Size = UDim2.new(1, 0, 0, 10)
     titleBarBottom.Position = UDim2.new(0, 0, 1, -10)
-    titleBarBottom.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    titleBarBottom.BackgroundColor3 = Color3.fromRGB(16,12,12)
     titleBarBottom.BorderSizePixel = 0
     titleBarBottom.ZIndex = 0
     titleBarBottom.Parent = titleBar
@@ -961,7 +515,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     local titleLabel = Instance.new("TextLabel")
     titleLabel.Name = "Title"
     titleLabel.Size = UDim2.new(1, -100, 1, 0)
-    titleLabel.Position = UDim2.new(0, 41, 0, 0)
+    titleLabel.Position = UDim2.new(0, 20, 0, 0)
     titleLabel.Text = "Animation ID Loader | MIC UP"
     titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     titleLabel.TextSize = 18
@@ -979,7 +533,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     minimizeButton.TextSize = 24
     minimizeButton.Font = Enum.Font.GothamSemibold
-    minimizeButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    minimizeButton.BackgroundColor3 = Color3.fromRGB(16,12,12)
     minimizeButton.BackgroundTransparency = 0.5
     minimizeButton.AutoButtonColor = true
     local minimizeCorner = Instance.new("UICorner") -- Rounded corner for minimizeButton
@@ -996,7 +550,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     closeButton.TextSize = 18
     closeButton.Font = Enum.Font.GothamSemibold
-    closeButton.BackgroundColor3 = Color3.fromRGB(255, 85, 85)
+    closeButton.BackgroundColor3 = Color3.fromRGB(16,12,12)
     closeButton.BackgroundTransparency = 0.5
     closeButton.AutoButtonColor = true
     local closeCorner = Instance.new("UICorner") -- Rounded corner for closeButton
@@ -1018,7 +572,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     toggleButton.Position = UDim2.new(0, 0, 0, 0)
     toggleButton.Text = "Enable Reanimation"
     toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleButton.TextSize = 16
+    toggleButton.TextSize = 18
     toggleButton.Font = Enum.Font.GothamSemibold
     toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
     toggleButton.BorderSizePixel = 0
@@ -1048,7 +602,6 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
         end
     end)
     -- End Minimize Logic ---
-
 
     toggleButton.MouseButton1Click:Connect(function()
         local newState = not getGhostEnabled()
@@ -1148,8 +701,6 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
         if ghostClone then
             local animId = fakeAnimTextBox.Text
             playFakeAnimation(animId)
-        else
-            warn("No fake character available!")
         end
     end)
 
@@ -1220,7 +771,6 @@ LocalPlayer.CharacterAdded:Connect(function(character)
                     toggleButton.Text = "Enable Reanimation"
                     toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
                 end
-                warn("Reanimation disabled before character reset.")
             end
         end)
     end
