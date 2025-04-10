@@ -2156,35 +2156,6 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
         stopFakeAnimation()
     end)
 
-    -- Add this function to create a rainbow effect
-    local function createRainbowEffect(textBox)
-        local hue = 0
-        local run = true
-    
-        spawn(function()
-            while run do
-                hue = (hue + 1) % 360
-                local color = Color3.fromHSV(hue / 360, 1, 1)
-                textBox.TextColor3 = color
-                textBox.Text = textBox.PlaceholderText -- Simulate placeholder text
-                task.wait(0.05)
-            end
-        end)
-    
-        textBox.Focused:Connect(function()
-            run = false
-            textBox.Text = "" -- Clear text when focused
-        end)
-    
-        textBox.FocusLost:Connect(function()
-            run = true
-            textBox.Text = textBox.PlaceholderText -- Restore placeholder text
-        end)
-    end
-    
-    -- Apply the rainbow effect to the fakeAnimTextBox
-    createRainbowEffect(fakeAnimTextBox)
-
     return screenGui
 end
 
