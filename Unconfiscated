@@ -471,6 +471,7 @@ local function playFakeAnimation(animationId)
 
 -- Creates a draggable GUI with a compact layout.
 local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, setSizeValue, getWidthValue, setWidthValue)
+
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "EnhancedGhostGui"
     screenGui.ResetOnSpawn = false
