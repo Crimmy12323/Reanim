@@ -499,7 +499,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     titleBar.Size = UDim2.new(1, 0, 0, 40)
     titleBar.BackgroundColor3 = Color3.fromRGB(16,12,12)
     titleBar.BorderSizePixel = 0
-    local titleCorner = Instance.new("UICorner")
+    local titleCorner = Instance.new("UICorner") -- Rounded corner for titleBar
     titleCorner.CornerRadius = UDim.new(0, 10)
     titleCorner.Parent = titleBar
     titleBar.Parent = mainFrame
