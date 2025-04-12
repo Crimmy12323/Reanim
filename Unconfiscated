@@ -18,6 +18,10 @@ local updateConnection
 -- Variable to store the original HipHeight of the clone
 local ghostOriginalHipHeight
 
+-- Clone settings: overall scale and extra width factor (default = 1, i.e., original size)
+local cloneSize = 1
+local cloneWidth = 1
+
 -- Tables to store the original sizes of parts and Motor6D CFrames (for non-uniform scaling)
 local ghostOriginalSizes = {}
 local ghostOriginalMotorCFrames = {}
