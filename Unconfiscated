@@ -18,10 +18,6 @@ local updateConnection
 -- Variable to store the original HipHeight of the clone
 local ghostOriginalHipHeight
 
--- Clone settings: overall scale and extra width factor (default = 1, i.e., original size)
-local cloneSize = 1
-local cloneWidth = 1
-
 -- Tables to store the original sizes of parts and Motor6D CFrames (for non-uniform scaling)
 local ghostOriginalSizes = {}
 local ghostOriginalMotorCFrames = {}
@@ -499,7 +495,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     titleBar.Size = UDim2.new(1, 0, 0, 40)
     titleBar.BackgroundColor3 = Color3.fromRGB(16,12,12)
     titleBar.BorderSizePixel = 0
-    local titleCorner = Instance.new("UICorner") -- Rounded corner for titleBar
+    local titleCorner = Instance.new("UICorner")
     titleCorner.CornerRadius = UDim.new(0, 10)
     titleCorner.Parent = titleBar
     titleBar.Parent = mainFrame
@@ -526,10 +522,10 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     titleLabel.Parent = titleBar
 
     -- Minimize Button
-    local minimizeButton = Instance.new("TextButton") -- Added Minimize Button
+    local minimizeButton = Instance.new("TextButton")
     minimizeButton.Name = "MinimizeButton"
     minimizeButton.Size = UDim2.new(0, 30, 0, 30)
-    minimizeButton.Position = UDim2.new(1, -65, 0, 5) -- Position next to close button
+    minimizeButton.Position = UDim2.new(1, -65, 0, 5)
     minimizeButton.Text = "-" -- Minimize Icon (you can use an image instead)
     minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     minimizeButton.TextSize = 24
@@ -537,7 +533,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     minimizeButton.BackgroundColor3 = Color3.fromRGB(16,12,12)
     minimizeButton.BackgroundTransparency = 0.5
     minimizeButton.AutoButtonColor = true
-    local minimizeCorner = Instance.new("UICorner") -- Rounded corner for minimizeButton
+    local minimizeCorner = Instance.new("UICorner")
     minimizeCorner.CornerRadius = UDim.new(0, 8)
     minimizeCorner.Parent = minimizeButton
     minimizeButton.Parent = titleBar
@@ -554,8 +550,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     closeButton.BackgroundColor3 = Color3.fromRGB(16,12,12)
     closeButton.BackgroundTransparency = 0.5
     closeButton.AutoButtonColor = true
-    local closeCorner = Instance.new("UICorner") -- Rounded corner for closeButton
-    closeCorner.CornerRadius = UDim.new(0, 8)
+    local closeCorner = Instance.new("UICorner")
     closeCorner.Parent = closeButton
     closeButton.Parent = titleBar
 
@@ -654,7 +649,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     local fakeAnimSection = Instance.new("Frame")
     fakeAnimSection.Name = "FakeAnimSection"
     fakeAnimSection.Size = UDim2.new(1, 0, 0, 50)
-    fakeAnimSection.Position = UDim2.new(0, 0, 0, 195) -- Position below width slider
+    fakeAnimSection.Position = UDim2.new(0, 0, 0, 195) 
     fakeAnimSection.BackgroundTransparency = 1
     fakeAnimSection.Parent = contentFrame
 
@@ -667,7 +662,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     fakeAnimTextBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     fakeAnimTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     fakeAnimTextBox.TextSize = 13
-    local fakeAnimTextBoxCorner = Instance.new("UICorner") -- Rounded corner for fakeAnimTextBox
+    local fakeAnimTextBoxCorner = Instance.new("UICorner")
     fakeAnimTextBoxCorner.CornerRadius = UDim.new(0, 6)
     fakeAnimTextBoxCorner.Parent = fakeAnimTextBox
     fakeAnimTextBox.Parent = fakeAnimSection
@@ -680,7 +675,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     fakeAnimButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     fakeAnimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     fakeAnimButton.TextSize = 12.5
-    local fakeAnimButtonCorner = Instance.new("UICorner") -- Rounded corner for fakeAnimButton
+    local fakeAnimButtonCorner = Instance.new("UICorner")
     fakeAnimButtonCorner.CornerRadius = UDim.new(0, 8)
     fakeAnimButtonCorner.Parent = fakeAnimButton
     fakeAnimButton.Parent = fakeAnimSection
@@ -693,7 +688,7 @@ local function createDraggableGui(getGhostEnabled, toggleGhost, getSizeValue, se
     stopFakeAnimButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
     stopFakeAnimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     stopFakeAnimButton.TextSize = 12.5
-    local stopFakeAnimButtonCorner = Instance.new("UICorner") -- Rounded corner for stopFakeAnimButton
+    local stopFakeAnimButtonCorner = Instance.new("UICorner")
     stopFakeAnimButtonCorner.CornerRadius = UDim.new(0, 8)
     stopFakeAnimButtonCorner.Parent = stopFakeAnimButton
     stopFakeAnimButton.Parent = fakeAnimSection
@@ -776,3 +771,226 @@ LocalPlayer.CharacterAdded:Connect(function(character)
         end)
     end
 end)
+
+-- StarterGui.ScreenGui.Emotes
+local function C_e()
+    local player = Players.LocalPlayer
+
+    -- Reference to the GUI buttons inside the scrolling frame
+    local emoteFrame = player:WaitForChild("PlayerGui"):WaitForChild("EmoteGui"):WaitForChild("EmoteFrame")
+    local scrollingFrame = emoteFrame:WaitForChild("ScrollingFrame")
+    local emoteButton1 = scrollingFrame:WaitForChild("Emote1")
+    local emoteButton2 = scrollingFrame:WaitForChild("Emote2")
+    local emoteButton3 = scrollingFrame:WaitForChild("Emote3")
+
+    -- Function to play the animation using the reanimation system
+    local function playReanimation(animationId)
+        if ghostEnabled then -- Ensure ghost mode is enabled
+            playFakeAnimation(animationId)
+        else
+            warn("Reanimation is not enabled!")
+        end
+    end
+
+    -- Connect the buttons to play the animation
+    emoteButton1.MouseButton1Click:Connect(function()
+        playReanimation(animationId1)
+    end)
+
+    emoteButton2.MouseButton1Click:Connect(function()
+        playReanimation(animationId2)
+    end)
+
+    emoteButton3.MouseButton1Click:Connect(function()
+        playReanimation(animationId3)
+    end)
+end
+
+task.spawn(C_e)
+
+-- Function to create an Emote Button
+local function createEmoteButton(parent, name, animationId, position)
+    local button = Instance.new("TextButton", parent)
+    button.Name = name
+    button.Size = UDim2.new(0, 179, 0, 32)
+    button.Position = position
+    button.BackgroundColor3 = Color3.fromRGB(198, 198, 198)
+    button.Text = name
+    button.TextSize = 17
+    button.Font = Enum.Font.GothamSemibold
+    button.TextColor3 = Color3.fromRGB(0, 0, 0)
+    button.BorderSizePixel = 0
+
+    local buttonCorner = Instance.new("UICorner", button)
+    buttonCorner.CornerRadius = UDim.new(0, 7)
+
+    button.MouseButton1Click:Connect(function()
+        if ghostEnabled then
+            playFakeAnimation(animationId)
+        else
+            warn("Reanimation is not enabled!")
+        end
+    end)
+
+    return button
+end
+
+-- Add Emote GUI
+local function createEmoteGui()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "EmoteGui"
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+
+    local emoteFrame = Instance.new("Frame", screenGui)
+    emoteFrame.Name = "EmoteFrame"
+    emoteFrame.Size = UDim2.new(0, 195, 0, 392)
+    emoteFrame.Position = UDim2.new(0.01, 0, 0.27, 0)
+    emoteFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    emoteFrame.BorderSizePixel = 0
+
+    local uiCorner = Instance.new("UICorner", emoteFrame)
+    uiCorner.CornerRadius = UDim.new(0, 16)
+
+    local uiStroke = Instance.new("UIStroke", emoteFrame)
+    uiStroke.Color = Color3.fromRGB(180, 180, 180)
+
+    local scrollingFrame = Instance.new("ScrollingFrame", emoteFrame)
+    scrollingFrame.Name = "ScrollingFrame"
+    scrollingFrame.Size = UDim2.new(0, 195, 0, 340)
+    scrollingFrame.Position = UDim2.new(0, 0, .1, 0)
+    scrollingFrame.BackgroundTransparency = 1
+    scrollingFrame.ScrollBarThickness = 3
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2000) -- Adjust canvas size for all buttons
+
+    local scrollingFrameCorner = Instance.new("UICorner", scrollingFrame)
+    scrollingFrameCorner.CornerRadius = UDim.new(0, 10) -- Adjust the corner radius as needed
+
+    local titleLabel = Instance.new("TextLabel", emoteFrame)
+    titleLabel.Name = "TitleLabel"
+    titleLabel.Size = UDim2.new(0, 162, 0, 50)
+    titleLabel.Position = UDim2.new(0.08, 0, -0.01, 0) -- Adjusted Y offset to move it higher
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "EMOTES"
+    titleLabel.TextSize = 28
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.TextColor3 = Color3.fromRGB(222, 222, 222)
+
+    -- Add Minimize Button
+    local minimizeButton = Instance.new("ImageButton", screenGui)
+    minimizeButton.Name = "MinimizeEmotes"
+    minimizeButton.Size = UDim2.new(0, 36, 0, 35)
+    minimizeButton.Position = UDim2.new(0.11563, 0, 0.43995, 0)
+    minimizeButton.BackgroundTransparency = 1
+    minimizeButton.Image = "http://www.roblox.com/asset/?id=17368181531"
+    minimizeButton.Rotation = 180
+
+    -- Add Tween Logic for Minimize Button
+    local moveButton = minimizeButton
+    local targetFrame = emoteFrame
+    local TweenService = game:GetService("TweenService")
+
+    -- Movement settings
+    local frameMoveDistance = 250
+    local buttonMoveDistance = 210
+    local moveTime = 0.25
+    local rotationAngle = 180
+
+    -- Store original positions & state
+    local originalFramePos = targetFrame.Position
+    local originalButtonPos = moveButton.Position
+    local originalRotation = 0
+
+    local moved = false -- track state
+
+    moveButton.MouseButton1Click:Connect(function()
+        local newFramePos
+        local newButtonPos
+        local newRotation
+
+        if not moved then
+            -- Move everything to the left and rotate
+            newFramePos = UDim2.new(originalFramePos.X.Scale, originalFramePos.X.Offset - frameMoveDistance, originalFramePos.Y.Scale, originalFramePos.Y.Offset)
+            newButtonPos = UDim2.new(originalButtonPos.X.Scale, originalButtonPos.X.Offset - buttonMoveDistance, originalButtonPos.Y.Scale, originalButtonPos.Y.Offset)
+            newRotation = originalRotation + rotationAngle
+        else
+            -- Return to original positions and rotation
+            newFramePos = originalFramePos
+            newButtonPos = originalButtonPos
+            newRotation = originalRotation
+        end
+
+        local tweenInfo = TweenInfo.new(moveTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+        local frameTween = TweenService:Create(targetFrame, tweenInfo, {Position = newFramePos})
+        local buttonTween = TweenService:Create(moveButton, tweenInfo, {
+            Position = newButtonPos,
+            Rotation = newRotation
+        })
+
+        frameTween:Play()
+        buttonTween:Play()
+
+        moved = not moved -- flip the state
+    end)
+
+    -- Add all emote buttons
+    local emotes = {
+        {"Back On 74 ID", "108088087568172"},
+        {"Boogie Bomb ID", "90159280044964"},
+        {"Billy Bounce ID", "96342044032488"},
+        {"Boogie Down ID", "83261869707370"},
+        {"Cupid's Arrow ID", "122288826913668"},
+        {"California Gurls ID", "131457845572132"},
+        {"Chase Me Down ID", "97455319886162"},
+        {"Default Dance ID", "9836885605"},
+        {"Dancery ID", "135978042300523"},
+        {"Desirable ID", "80125132098992"},
+        {"Disco Fever ID", "9836369561"},
+        {"Evil Plan ID", "99449894581351"},
+        {"Electro Shuffle ID", "9116910876"},
+        {"Electro Swing ID", "7839963379"},
+        {"FreeStylin ID", "107995227083576"},
+        {"Fresh ID", "9116897929"},
+        {"Groove Destroyer ID", "18147813725"},
+        {"Griddy ID", "135342670717393"},
+        {"Hot Marat ID", "7107202783"},
+        {"Hey Now ID", "7124753337"},
+        {"Hype ID", "121532134633896"},
+        {"Head Banger ID", "114573617035275"},
+        {"Infinite Dab ID", "74538409545244"},
+        {"Jabba Switchway ID", "8229514367"},
+        {"Jubi Slide ID", "16570530493"},
+        {"Lucid Dreams ID", "108895351743195"},
+        {"Look At Me ID", "129004554500202"},
+        {"Mr Blue Sky!!! ID", "8603017969"},
+        {"Maximum Bounce ID", "8703876822"},
+        {"Miku Live ID", "102039871027058"},
+        {"Miku Miku Beam ID", "116802170205791"},
+        {"No Cure ID", "76827103391437"},
+        {"Orange Justice ID", "11212163754"},
+        {"Phonky Turn ID", "122815417402057"},
+        {"Pull Up ID", "8871805743"},
+        {"Poki ID", "83405509049719"},
+        {"Party Hips ID", "91664350716653"},
+        {"Reanimated ID", "7757686890"},
+        {"Scenario ID", "8924083749"},
+        {"Snoop's Walk ID", "95567389800091"},
+        {"Slalom Style ID", "123624215915471"},
+        {"Toosie Slide ID", "8230248004"},
+        {"Take The L ID", "114109549820426"},
+        {"The Floss ID", "9003921069"},
+        {"Verve ID", "119993822512014"},
+        {"The Viper ID", "109195495448084"},
+        {"What You Want ID", "112811217802231"}
+    }
+
+    local yOffset = 0
+    for _, emote in ipairs(emotes) do
+        createEmoteButton(scrollingFrame, emote[1], emote[2], UDim2.new(0.035, 0, 0, yOffset))
+        yOffset = yOffset + 40 -- Adjust spacing between buttons
+    end
+end
+
+-- Create the Emote GUI
+createEmoteGui()
