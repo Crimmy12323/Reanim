@@ -828,18 +828,9 @@ local function createEmoteButton(parent, name, animationId, position)
     local buttonCorner = Instance.new("UICorner", button)
     buttonCorner.CornerRadius = UDim.new(0, 7)
 
-    -- Track the current animation state
-    local isPlaying = false
-
     button.MouseButton1Click:Connect(function()
         if ghostEnabled then
-            if isPlaying then
-                stopFakeAnimation() -- Stop the animation if it's already playing
-                isPlaying = false
-            else
-                playFakeAnimation(animationId) -- Play the animation if it's not playing
-                isPlaying = true
-            end
+            playFakeAnimation(animationId) -- Always play the animation when the button is clicked
         else
             warn("Reanimation is not enabled!")
         end
@@ -848,7 +839,6 @@ local function createEmoteButton(parent, name, animationId, position)
     return button
 end
 
--- Adjusted position of the emotes GUI to the lower left corner of the screen
 local function createEmoteGui()
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "EmoteGui"
@@ -858,7 +848,7 @@ local function createEmoteGui()
     local emoteFrame = Instance.new("Frame", screenGui)
     emoteFrame.Name = "EmoteFrame"
     emoteFrame.Size = UDim2.new(0, 195, 0, 392)
-    emoteFrame.Position = UDim2.new(0.01, 0, 0.59, 0) -- Adjusted to lower left corner
+    emoteFrame.Position = UDim2.new(0.01, 0, 0.59, 0)
     emoteFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     emoteFrame.BorderSizePixel = 0
 
@@ -874,15 +864,15 @@ local function createEmoteGui()
     scrollingFrame.Position = UDim2.new(0, 0, .1, 0)
     scrollingFrame.BackgroundTransparency = 1
     scrollingFrame.ScrollBarThickness = 3
-    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2000) -- Adjust canvas size for all buttons
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2000)
 
     local scrollingFrameCorner = Instance.new("UICorner", scrollingFrame)
-    scrollingFrameCorner.CornerRadius = UDim.new(0, 10) -- Adjust the corner radius as needed
+    scrollingFrameCorner.CornerRadius = UDim.new(0, 10)
 
     local titleLabel = Instance.new("TextLabel", emoteFrame)
     titleLabel.Name = "TitleLabel"
     titleLabel.Size = UDim2.new(0, 162, 0, 50)
-    titleLabel.Position = UDim2.new(0.08, 0, -0.01, 0) -- Adjusted Y offset to move it higher
+    titleLabel.Position = UDim2.new(0.08, 0, -0.01, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = "EMOTES"
     titleLabel.TextSize = 28
@@ -893,12 +883,11 @@ local function createEmoteGui()
     local minimizeButton = Instance.new("ImageButton", screenGui)
     minimizeButton.Name = "MinimizeEmotes"
     minimizeButton.Size = UDim2.new(0, 36, 0, 35)
-    minimizeButton.Position = UDim2.new(0.11563, 0, 0.76, 0) -- Adjusted to lower left corner
+    minimizeButton.Position = UDim2.new(0.11563, 0, 0.76, 0)
     minimizeButton.BackgroundTransparency = 1
     minimizeButton.Image = "http://www.roblox.com/asset/?id=17368181531"
     minimizeButton.Rotation = 180
 
-    -- Add Tween Logic for Minimize Button
     local moveButton = minimizeButton
     local targetFrame = emoteFrame
     local TweenService = game:GetService("TweenService")
@@ -909,7 +898,6 @@ local function createEmoteGui()
     local moveTime = 0.25
     local rotationAngle = 180
 
-    -- Store original positions & state
     local originalFramePos = targetFrame.Position
     local originalButtonPos = moveButton.Position
     local originalRotation = 0
