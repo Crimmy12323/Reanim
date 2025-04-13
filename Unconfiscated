@@ -839,7 +839,7 @@ local function createEmoteButton(parent, name, animationId, position)
     return button
 end
 
--- Add Emote GUI
+-- Adjusted position of the emotes GUI to the lower left corner of the screen
 local function createEmoteGui()
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "EmoteGui"
@@ -849,7 +849,7 @@ local function createEmoteGui()
     local emoteFrame = Instance.new("Frame", screenGui)
     emoteFrame.Name = "EmoteFrame"
     emoteFrame.Size = UDim2.new(0, 195, 0, 392)
-    emoteFrame.Position = UDim2.new(0.01, 0, 0.27, 0)
+    emoteFrame.Position = UDim2.new(0.01, 0, 0.59, 0) -- Adjusted to lower left corner
     emoteFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     emoteFrame.BorderSizePixel = 0
 
@@ -884,7 +884,7 @@ local function createEmoteGui()
     local minimizeButton = Instance.new("ImageButton", screenGui)
     minimizeButton.Name = "MinimizeEmotes"
     minimizeButton.Size = UDim2.new(0, 36, 0, 35)
-    minimizeButton.Position = UDim2.new(0.11563, 0, 0.43995, 0)
+    minimizeButton.Position = UDim2.new(0.11563, 0, 0.76, 0) -- Adjusted to lower left corner
     minimizeButton.BackgroundTransparency = 1
     minimizeButton.Image = "http://www.roblox.com/asset/?id=17368181531"
     minimizeButton.Rotation = 180
