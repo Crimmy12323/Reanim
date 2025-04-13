@@ -828,9 +828,18 @@ local function createEmoteButton(parent, name, animationId, position)
     local buttonCorner = Instance.new("UICorner", button)
     buttonCorner.CornerRadius = UDim.new(0, 7)
 
+    -- Track the current animation state
+    local isPlaying = false
+
     button.MouseButton1Click:Connect(function()
         if ghostEnabled then
-            playFakeAnimation(animationId)
+            if isPlaying then
+                stopFakeAnimation() -- Stop the animation if it's already playing
+                isPlaying = false
+            else
+                playFakeAnimation(animationId) -- Play the animation if it's not playing
+                isPlaying = true
+            end
         else
             warn("Reanimation is not enabled!")
         end
