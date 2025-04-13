@@ -3,48 +3,40 @@ Workspace = game:GetService("Workspace")
 UserInputService = game:GetService("UserInputService")
 RunService = game:GetService("RunService")
 ReplicatedStorage = game:GetService("ReplicatedStorage")
-TweenService = game:GetService("TweenService")
 LocalPlayer = Players.LocalPlayer
-HttpService = game:GetService("HttpService")
 
 -- Variables for state storage
 local ghostEnabled = false
 local originalCharacter
 local ghostClone
 local originalCFrame
-local originalAnimateScript
 local updateConnection
 
--- Variable to store the original HipHeight of the clone
-local ghostOriginalHipHeight
-
--- Clone settings: overall scale and extra width factor (default = 1, i.e., original size)
+-- Clone settings
 local cloneSize = 1
 local cloneWidth = 1
 
--- Tables to store the original sizes of parts and Motor6D CFrames (for non-uniform scaling)
+-- Tables to store original sizes and Motor6D CFrames
 local ghostOriginalSizes = {}
 local ghostOriginalMotorCFrames = {}
 
 -- List of body parts to synchronize
 local bodyParts = {
-"Head", "UpperTorso", "LowerTorso",
-"LeftUpperArm", "LeftLowerArm", "LeftHand",
-"RightUpperArm", "RightLowerArm", "RightHand",
-"LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
-"RightUpperLeg", "RightLowerLeg", "RightFoot"
+    "Head", "UpperTorso", "LowerTorso",
+    "LeftUpperArm", "LeftLowerArm", "LeftHand",
+    "RightUpperArm", "RightLowerArm", "RightHand",
+    "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+    "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }
--- NEW: Table to store keybinds for animations (animation name -> KeyCode)
-local animationKeybinds = {}
 
--- Helper function to scale a CFrame uniformly (keeps rotation)
+-- Helper function to scale a CFrame uniformly
 local function scaleCFrame(cf, scale)
     local pos = cf.Position * scale
     local xRot, yRot, zRot = cf:ToEulerAnglesXYZ()
     return CFrame.new(pos) * CFrame.Angles(xRot, yRot, zRot)
 end
 
--- Function that moves the clone so its lowest point (Y-coordinate) is at 0
+-- Function to adjust the clone to the ground
 local function adjustCloneToGround(clone)
     if not clone then return end
     local lowestY = math.huge
@@ -56,17 +48,25 @@ local function adjustCloneToGround(clone)
             end
         end
     end
-    local groundY = 0
-    local offset = groundY - lowestY
-    if offset > 0 then
-        if clone.PrimaryPart then
-            clone:SetPrimaryPartCFrame(clone.PrimaryPart.CFrame + Vector3.new(0, offset, 0))
-        else
-            clone:TranslateBy(Vector3.new(0, offset, 0))
-        end
+    local offset = 0 - lowestY
+    if offset > 0 and clone.PrimaryPart then
+        clone:SetPrimaryPartCFrame(clone.PrimaryPart.CFrame + Vector3.new(0, offset, 0))
     end
 end
 
+-- Function to update the clone's scale
+local function updateCloneScale()
+    if not ghostClone then return end
+    for part, origSize in pairs(ghostOriginalSizes) do
+        if part and part:IsA("BasePart") then
+            part.Size = Vector3.new(origSize.X * cloneSize * cloneWidth, origSize.Y * cloneSize, origSize.Z * cloneSize)
+        end
+    end
+    adjustCloneToGround(ghostClone)
+end
+
+-- Function to synchronize the ragdolled body parts
+local function updateRagdolledParts()
 -- Functions to temporarily preserve GUIs (ResetOnSpawn)
 local preservedGuis = {}
 local function preserveGuis()
@@ -828,9 +828,18 @@ local function createEmoteButton(parent, name, animationId, position)
     local buttonCorner = Instance.new("UICorner", button)
     buttonCorner.CornerRadius = UDim.new(0, 7)
 
+    -- Track if the animation is currently playing
+    local isPlaying = false
+
     button.MouseButton1Click:Connect(function()
         if ghostEnabled then
-            playFakeAnimation(animationId)
+            if isPlaying then
+                stopFakeAnimation() -- Stop the animation if it's already playing
+                isPlaying = false
+            else
+                playFakeAnimation(animationId) -- Play the animation if it's not playing
+                isPlaying = true
+            end
         else
             warn("Reanimation is not enabled!")
         end
