@@ -751,7 +751,6 @@ end)
 -- Initialization
 LocalPlayer = Players.LocalPlayer
 
--- Monitor character reset and force disable reanimation
 LocalPlayer.CharacterAdded:Connect(function(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
     if humanoid then
@@ -765,6 +764,23 @@ LocalPlayer.CharacterAdded:Connect(function(character)
                 end)
 
                 -- Turn off reanimation
+                setGhostEnabled(false)
+                local toggleButton = gui:FindFirstChild("ToggleButton", true)
+                if toggleButton then
+                    toggleButton.Text = "Enable Reanimation"
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+                end
+            end
+        end)
+    end
+end)
+
+LocalPlayer.CharacterAdded:Connect(function(character)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if humanoid then
+        humanoid.Died:Connect(function()
+            if ghostEnabled then
+                -- Disable reanimation when the player dies
                 setGhostEnabled(false)
                 local toggleButton = gui:FindFirstChild("ToggleButton", true)
                 if toggleButton then
