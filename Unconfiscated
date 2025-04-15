@@ -778,14 +778,39 @@ end)
 LocalPlayer.CharacterAdded:Connect(function(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
     if humanoid then
+        -- Disable reanimation upon death
         humanoid.Died:Connect(function()
             if ghostEnabled then
-                -- Disable reanimation when the player dies
                 setGhostEnabled(false)
                 local toggleButton = gui:FindFirstChild("ToggleButton", true)
                 if toggleButton then
                     toggleButton.Text = "Enable Reanimation"
                     toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+                end
+            end
+        end)
+
+        -- Teleport to nearest spawn point if falling into the void
+        local spawnPoints = Workspace:FindFirstChild("SpawnPoints") -- Ensure spawn points are grouped under a folder named "SpawnPoints"
+        local voidThreshold = -50 -- Y-coordinate threshold for falling into the void
+
+        RunService.Heartbeat:Connect(function()
+            if character.PrimaryPart and character.PrimaryPart.Position.Y < voidThreshold then
+                if spawnPoints and #spawnPoints:GetChildren() > 0 then
+                    local nearestSpawn
+                    local shortestDistance = math.huge
+                    for _, spawn in ipairs(spawnPoints:GetChildren()) do
+                        if spawn:IsA("BasePart") then
+                            local distance = (character.PrimaryPart.Position - spawn.Position).Magnitude
+                            if distance < shortestDistance then
+                                shortestDistance = distance
+                                nearestSpawn = spawn
+                            end
+                        end
+                    end
+                    if nearestSpawn then
+                        character:SetPrimaryPartCFrame(nearestSpawn.CFrame + Vector3.new(0, 5, 0)) -- Teleport above the spawn point
+                    end
                 end
             end
         end)
