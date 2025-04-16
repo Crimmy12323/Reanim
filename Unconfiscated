@@ -835,7 +835,7 @@ local function createEmoteButton(parent, name, animationId, position)
     button.Name = name
     button.Size = UDim2.new(0, 179, 0, 32)
     button.Position = position
-    button.BackgroundColor3 = Color3.fromRGB(198, 198, 198)
+    button.BackgroundColor3 = Color3.fromRGB(256, 220, 228)
     button.Text = name
     button.TextSize = 17
     button.Font = Enum.Font.GothamSemibold
@@ -866,21 +866,22 @@ local function createEmoteGui()
     emoteFrame.Name = "EmoteFrame"
     emoteFrame.Size = UDim2.new(0, 195, 0, 392)
     emoteFrame.Position = UDim2.new(0.01, 0, 0.59, 0)
-    emoteFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    emoteFrame.BackgroundColor3 = Color3.fromRGB(256, 236, 244)
     emoteFrame.BorderSizePixel = 0
 
     local uiCorner = Instance.new("UICorner", emoteFrame)
     uiCorner.CornerRadius = UDim.new(0, 16)
 
     local uiStroke = Instance.new("UIStroke", emoteFrame)
-    uiStroke.Color = Color3.fromRGB(180, 180, 180)
+    uiStroke.Color = Color3.fromRGB(128, 126, 126)
+    uiStroke.Thickness = 1.2
 
     local scrollingFrame = Instance.new("ScrollingFrame", emoteFrame)
     scrollingFrame.Name = "ScrollingFrame"
     scrollingFrame.Size = UDim2.new(0, 195, 0, 340)
     scrollingFrame.Position = UDim2.new(0, 0, .1, 0)
     scrollingFrame.BackgroundTransparency = 1
-    scrollingFrame.ScrollBarThickness = 3
+    scrollingFrame.ScrollBarThickness = 0
     scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2000)
 
     local scrollingFrameCorner = Instance.new("UICorner", scrollingFrame)
@@ -894,7 +895,7 @@ local function createEmoteGui()
     titleLabel.Text = "EMOTES"
     titleLabel.TextSize = 28
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextColor3 = Color3.fromRGB(222, 222, 222)
+    titleLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
 
     -- Add Minimize Button
     local minimizeButton = Instance.new("ImageButton", screenGui)
