@@ -7,44 +7,32 @@ TweenService = game:GetService("TweenService")
 LocalPlayer = Players.LocalPlayer
 HttpService = game:GetService("HttpService")
 
--- Variables for state storage
 local ghostEnabled = false
 local originalCharacter
 local ghostClone
 local originalCFrame
 local originalAnimateScript
 local updateConnection
-
--- Variable to store the original HipHeight of the clone
 local ghostOriginalHipHeight
-
--- Clone settings: overall scale and extra width factor (default = 1, i.e., original size)
 local cloneSize = 1
 local cloneWidth = 1
-
--- Tables to store the original sizes of parts and Motor6D CFrames (for non-uniform scaling)
 local ghostOriginalSizes = {}
 local ghostOriginalMotorCFrames = {}
-
--- List of body parts to synchronize
 local bodyParts = {
-"Head", "UpperTorso", "LowerTorso",
-"LeftUpperArm", "LeftLowerArm", "LeftHand",
-"RightUpperArm", "RightLowerArm", "RightHand",
-"LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
-"RightUpperLeg", "RightLowerLeg", "RightFoot"
+    "Head", "UpperTorso", "LowerTorso",
+    "LeftUpperArm", "LeftLowerArm", "LeftHand",
+    "RightUpperArm", "RightLowerArm", "RightHand",
+    "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+    "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }
--- NEW: Table to store keybinds for animations (animation name -> KeyCode)
 local animationKeybinds = {}
 
--- Helper function to scale a CFrame uniformly (keeps rotation)
 local function scaleCFrame(cf, scale)
     local pos = cf.Position * scale
     local xRot, yRot, zRot = cf:ToEulerAnglesXYZ()
     return CFrame.new(pos) * CFrame.Angles(xRot, yRot, zRot)
 end
 
--- Function that moves the clone so its lowest point (Y-coordinate) is at 0
 local function adjustCloneToGround(clone)
     if not clone then return end
     local lowestY = math.huge
@@ -67,7 +55,6 @@ local function adjustCloneToGround(clone)
     end
 end
 
--- Functions to temporarily preserve GUIs (ResetOnSpawn)
 local preservedGuis = {}
 local function preserveGuis()
     local playerGui = LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
@@ -88,7 +75,6 @@ local function restoreGuis()
     table.clear(preservedGuis)
 end
 
--- and cloneWidth (extra scaling only on the X-axis).
 local function updateCloneScale()
     if not ghostClone then return end
     for part, origSize in pairs(ghostOriginalSizes) do
@@ -123,7 +109,6 @@ local function updateCloneScale()
     adjustCloneToGround(ghostClone)
 end
 
--- Function to update the clone’s transparency (fully invisible)
 local function updateCloneTransparency()
     if not ghostClone then return end
     for _, part in pairs(ghostClone:GetDescendants()) do
@@ -141,7 +126,6 @@ local function updateCloneTransparency()
     end
 end
 
--- Function to synchronize the ragdolled body parts
 local function updateRagdolledParts()
     if not ghostEnabled or not originalCharacter or not ghostClone then return end
     for _, partName in ipairs(bodyParts) do
@@ -155,7 +139,6 @@ local function updateRagdolledParts()
     end
 end
 
--- Function to enable/disable ghost mode
 local function setGhostEnabled(newState)
     ghostEnabled = newState
 
@@ -246,7 +229,7 @@ local function setGhostEnabled(newState)
             originalAnimateScript.Disabled = false
         end
 
-        task.delay(0, function() -- Changed delay to 0
+        task.delay(0, function()
             if not ghostEnabled then return end
             ReplicatedStorage.RagdollEvent:FireServer()
             task.delay(0, function()
@@ -1061,6 +1044,28 @@ local function createEmoteGui()
     minimizeButton.BackgroundTransparency = 1
     minimizeButton.Image = "http://www.roblox.com/asset/?id=17368181531"
     minimizeButton.Rotation = 180
+
+    -- Add scaling effect when the button is clicked
+    minimizeButton.MouseButton1Click:Connect(function()
+        -- Shrink the button
+        minimizeButton:TweenSize(
+            UDim2.new(0, 30, 0, 29), -- New smaller size
+            Enum.EasingDirection.Out,
+            Enum.EasingStyle.Quad,
+            0.1, -- Animation duration
+            true,
+            function()
+                -- Restore the button to its original size after shrinking
+                minimizeButton:TweenSize(
+                    UDim2.new(0, 36, 0, 35), -- Original size
+                    Enum.EasingDirection.Out,
+                    Enum.EasingStyle.Quad,
+                    0.1, -- Animation duration
+                    true
+                )
+            end
+        )
+    end)
 
     local moveButton = minimizeButton
     local targetFrame = emoteFrame
