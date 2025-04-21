@@ -737,12 +737,75 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if input.UserInputType == Enum.UserInputType.Keyboard then
         for animName, keyCode in pairs(animationKeybinds) do
             if input.KeyCode == keyCode then
-             if fakeAnimRunning then
-                 stopFakeAnimation() -- Stop any currently running animation
-             else
-                 playFakeAnimation(BuiltInAnimationsR15[animName])
-             end
-             return -- Stop checking after finding a match
+                local emotes = {
+                    {"Back On 74 ID", "108088087568172"},
+                    {"Boogie Bomb ID", "90159280044964"},
+                    {"Billy Bounce ID", "96342044032488"},
+                    {"Boogie Down ID", "83261869707370"},
+                    {"Cupid's Arrow ID", "122288826913668"},
+                    {"California Gurls ID", "131457845572132"},
+                    {"Chase Me Down ID", "97455319886162"},
+                    {"Default Dance ID", "9836885605"},
+                    {"Dancery ID", "135978042300523"},
+                    {"Desirable ID", "80125132098992"},
+                    {"Disco Fever ID", "9836369561"},
+                    {"Evil Plan ID", "99449894581351"},
+                    {"Electro Shuffle ID", "9116910876"},
+                    {"Electro Swing ID", "7839963379"},
+                    {"FreeStylin ID", "107995227083576"},
+                    {"Fresh ID", "9116897929"},
+                    {"Groove Destroyer ID", "18147813725"},
+                    {"Griddy ID", "135342670717393"},
+                    {"Hot Marat ID", "7107202783"},
+                    {"Hey Now ID", "7124753337"},
+                    {"Hype ID", "121532134633896"},
+                    {"Head Banger ID", "114573617035275"},
+                    {"Infinite Dab ID", "74538409545244"},
+                    {"Jabba Switchway ID", "8229514367"},
+                    {"Jubi Slide ID", "16570530493"},
+                    {"Lucid Dreams ID", "108895351743195"},
+                    {"Look At Me ID", "129004554500202"},
+                    {"Mr Blue Sky!!! ID", "8603017969"},
+                    {"Maximum Bounce ID", "8703876822"},
+                    {"Miku Live ID", "102039871027058"},
+                    {"Miku Miku Beam ID", "116802170205791"},
+                    {"No Cure ID", "76827103391437"},
+                    {"Orange Justice ID", "11212163754"},
+                    {"Phonky Turn ID", "122815417402057"},
+                    {"Pull Up ID", "8871805743"},
+                    {"Poki ID", "83405509049719"},
+                    {"Party Hips ID", "91664350716653"},
+                    {"Reanimated ID", "7757686890"},
+                    {"Scenario ID", "8924083749"},
+                    {"Snoop's Walk ID", "95567389800091"},
+                    {"Slalom Style ID", "123624215915471"},
+                    {"Toosie Slide ID", "8230248004"},
+                    {"Take The L ID", "114109549820426"},
+                    {"The Floss ID", "9003921069"},
+                    {"Verve ID", "119993822512014"},
+                    {"The Viper ID", "109195495448084"},
+                    {"What You Want ID", "112811217802231"}
+                }
+
+                -- Find the animation ID for the given animation name
+                local animationId = nil
+                for _, emote in ipairs(emotes) do
+                    if emote[1] == animName then
+                        animationId = emote[2]
+                        break
+                    end
+                end
+
+                if animationId then
+                    if fakeAnimRunning then
+                        stopFakeAnimation() -- Stop any currently running animation
+                    else
+                        playFakeAnimation(animationId) -- Play the animation
+                    end
+                else
+                    warn("Animation ID not found for keybind: " .. animName)
+                end
+                return -- Stop checking after finding a match
             end
         end
     end
@@ -829,11 +892,11 @@ end
 
 task.spawn(C_e)
 
--- Function to create an Emote Button
+-- Function to create an Emote Button with a keybind setter
 local function createEmoteButton(parent, name, animationId, position)
     local button = Instance.new("TextButton", parent)
     button.Name = name
-    button.Size = UDim2.new(0, 179, 0, 32)
+    button.Size = UDim2.new(0, 180, 0, 32) -- Increased width from 140 to 180
     button.Position = position
     button.BackgroundColor3 = Color3.fromRGB(256, 220, 228)
     button.Text = name
@@ -853,6 +916,34 @@ local function createEmoteButton(parent, name, animationId, position)
         end
     end)
 
+    -- Add a small button for setting keybinds
+    local keybindButton = Instance.new("TextButton", parent)
+    keybindButton.Name = name .. "Keybind"
+    keybindButton.Size = UDim2.new(0, 40, 0, 32) -- Adjusted width to 40
+    keybindButton.Position = UDim2.new(0, position.X.Offset + 190, 0, position.Y.Offset) -- Adjusted position to match wider emote button
+    keybindButton.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    keybindButton.Text = "+"
+    keybindButton.TextSize = 14
+    keybindButton.Font = Enum.Font.GothamSemibold
+    keybindButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+    keybindButton.BorderSizePixel = 0
+
+    local keybindButtonCorner = Instance.new("UICorner", keybindButton)
+    keybindButtonCorner.CornerRadius = UDim.new(0, 7)
+
+    keybindButton.MouseButton1Click:Connect(function()
+        keybindButton.Text = "..."
+        local connection
+        connection = UserInputService.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                local keyCode = input.KeyCode
+                animationKeybinds[name] = keyCode -- Save the keybind
+                keybindButton.Text = keyCode.Name -- Display the keybind on the button
+                connection:Disconnect() -- Stop listening for input
+            end
+        end)
+    end)
+
     return button
 end
 
@@ -864,7 +955,7 @@ local function createEmoteGui()
 
     local emoteFrame = Instance.new("Frame", screenGui)
     emoteFrame.Name = "EmoteFrame"
-    emoteFrame.Size = UDim2.new(0, 195, 0, 392)
+    emoteFrame.Size = UDim2.new(0, 241, 0, 392) -- Increased width from 195 to 250
     emoteFrame.Position = UDim2.new(0.01, 0, 0.59, 0)
     emoteFrame.BackgroundColor3 = Color3.fromRGB(256, 236, 244)
     emoteFrame.BorderSizePixel = 0
@@ -878,7 +969,7 @@ local function createEmoteGui()
 
     local scrollingFrame = Instance.new("ScrollingFrame", emoteFrame)
     scrollingFrame.Name = "ScrollingFrame"
-    scrollingFrame.Size = UDim2.new(0, 195, 0, 340)
+    scrollingFrame.Size = UDim2.new(0, 250, 0, 340) -- Increased width from 195 to 250
     scrollingFrame.Position = UDim2.new(0, 0, .1, 0)
     scrollingFrame.BackgroundTransparency = 1
     scrollingFrame.ScrollBarThickness = 0
@@ -889,7 +980,7 @@ local function createEmoteGui()
 
     local titleLabel = Instance.new("TextLabel", emoteFrame)
     titleLabel.Name = "TitleLabel"
-    titleLabel.Size = UDim2.new(0, 162, 0, 50)
+    titleLabel.Size = UDim2.new(0, 200, 0, 50) -- Adjusted width to fit the new frame size
     titleLabel.Position = UDim2.new(0.08, 0, -0.01, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = "EMOTES"
@@ -901,7 +992,7 @@ local function createEmoteGui()
     local minimizeButton = Instance.new("ImageButton", screenGui)
     minimizeButton.Name = "MinimizeEmotes"
     minimizeButton.Size = UDim2.new(0, 36, 0, 35)
-    minimizeButton.Position = UDim2.new(0.11563, 0, 0.76, 0)
+    minimizeButton.Position = UDim2.new(0.14563, 0, 0.76, 0)
     minimizeButton.BackgroundTransparency = 1
     minimizeButton.Image = "http://www.roblox.com/asset/?id=17368181531"
     minimizeButton.Rotation = 180
@@ -911,8 +1002,8 @@ local function createEmoteGui()
     local TweenService = game:GetService("TweenService")
 
     -- Movement settings
-    local frameMoveDistance = 250
-    local buttonMoveDistance = 210
+    local frameMoveDistance = 290
+    local buttonMoveDistance = 230
     local moveTime = 0.25
     local rotationAngle = 180
 
