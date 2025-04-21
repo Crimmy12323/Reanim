@@ -908,6 +908,28 @@ local function createEmoteButton(parent, name, animationId, position)
     local buttonCorner = Instance.new("UICorner", button)
     buttonCorner.CornerRadius = UDim.new(0, 7)
 
+    -- Hover Animation
+    button.MouseEnter:Connect(function()
+        local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(256, 220, 228)})
+        hoverTween:Play()
+    end)
+
+    button.MouseLeave:Connect(function()
+        local leaveTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(256, 220, 228)})
+        leaveTween:Play()
+    end)
+
+    -- Click Animation
+    button.MouseButton1Down:Connect(function()
+        local clickTween = TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(0, 175, 0, 30)})
+        clickTween:Play()
+    end)
+
+    button.MouseButton1Up:Connect(function()
+        local releaseTween = TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(0, 180, 0, 32)})
+        releaseTween:Play()
+    end)
+
     button.MouseButton1Click:Connect(function()
         if ghostEnabled then
             playFakeAnimation(animationId) -- Always play the animation when the button is clicked
@@ -931,14 +953,57 @@ local function createEmoteButton(parent, name, animationId, position)
     local keybindButtonCorner = Instance.new("UICorner", keybindButton)
     keybindButtonCorner.CornerRadius = UDim.new(0, 7)
 
+    -- Hover Animation for Keybind Button
+    keybindButton.MouseEnter:Connect(function()
+        local hoverTween = TweenService:Create(keybindButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 220, 220)})
+        hoverTween:Play()
+    end)
+
+    keybindButton.MouseLeave:Connect(function()
+        local leaveTween = TweenService:Create(keybindButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(200, 200, 200)})
+        leaveTween:Play()
+    end)
+
+    -- Click Animation for Keybind Button
+    keybindButton.MouseButton1Down:Connect(function()
+        local clickTween = TweenService:Create(keybindButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 38, 0, 30)})
+        clickTween:Play()
+    end)
+
+    keybindButton.MouseButton1Up:Connect(function()
+        local releaseTween = TweenService:Create(keybindButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 40, 0, 32)})
+        releaseTween:Play()
+    end)
+
     keybindButton.MouseButton1Click:Connect(function()
         keybindButton.Text = "..."
         local connection
         connection = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
                 local keyCode = input.KeyCode
-                animationKeybinds[name] = keyCode -- Save the keybind
+
+                -- Check if the key is already assigned to another emote
+                for _, assignedKey in pairs(animationKeybinds) do
+                    if assignedKey == keyCode then
+                        warn("This key is already assigned to another emote!")
+                        keybindButton.Text = "+"
+                        connection:Disconnect() -- Stop listening for input
+                        return
+                    end
+                end
+
+                -- Assign the key if it's not already in use
+                animationKeybinds[name] = keyCode
                 keybindButton.Text = keyCode.Name -- Display the keybind on the button
+                connection:Disconnect() -- Stop listening for input
+            end
+        end)
+
+        -- Cancel keybind selection on right-click
+        keybindButton.MouseButton2Click:Connect(function()
+            keybindButton.Text = "+"
+            animationKeybinds[name] = nil -- Remove the keybind
+            if connection then
                 connection:Disconnect() -- Stop listening for input
             end
         end)
@@ -1042,6 +1107,27 @@ local function createEmoteGui()
         buttonTween:Play()
 
         moved = not moved -- flip the state
+    end)
+
+    -- Add animations to the minimize button
+    minimizeButton.MouseEnter:Connect(function()
+        local hoverTween = TweenService:Create(minimizeButton, TweenInfo.new(0.2), {ImageTransparency = 0.2})
+        hoverTween:Play()
+    end)
+
+    minimizeButton.MouseLeave:Connect(function()
+        local leaveTween = TweenService:Create(minimizeButton, TweenInfo.new(0.2), {ImageTransparency = 0})
+        leaveTween:Play()
+    end)
+
+    minimizeButton.MouseButton1Down:Connect(function()
+        local clickTween = TweenService:Create(minimizeButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 34, 0, 33)})
+        clickTween:Play()
+    end)
+
+    minimizeButton.MouseButton1Up:Connect(function()
+        local releaseTween = TweenService:Create(minimizeButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 36, 0, 35)})
+        releaseTween:Play()
     end)
 
     -- Add all emote buttons
