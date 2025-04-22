@@ -996,6 +996,12 @@ local function createEmoteButton(parent, name, animationId, position)
 end
 
 local function createEmoteGui()
+    -- Check if an EmoteGui already exists and delete it
+    local existingGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("EmoteGui")
+    if existingGui then
+        existingGui:Destroy()
+    end
+
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "EmoteGui"
     screenGui.ResetOnSpawn = false
