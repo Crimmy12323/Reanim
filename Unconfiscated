@@ -1005,6 +1005,7 @@ local function createEmoteGui()
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "EmoteGui"
     screenGui.ResetOnSpawn = false
+    screenGui.IgnoreGuiInset = true -- Ignore GUI inset
     screenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 
     local emoteFrame = Instance.new("Frame", screenGui)
@@ -1087,7 +1088,7 @@ local function createEmoteGui()
     local originalButtonPos = moveButton.Position
     local originalRotation = 0
 
-    local moved = false -- track state
+    moved = false -- track state
 
     moveButton.MouseButton1Click:Connect(function()
         local newFramePos
