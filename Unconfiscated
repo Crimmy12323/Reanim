@@ -881,11 +881,11 @@ local function createEmoteButton(parent, name, animationId, position)
     button.Name = name
     button.Size = UDim2.new(0, 180, 0, 32) -- Increased width from 140 to 180
     button.Position = position
-    button.BackgroundColor3 = Color3.fromRGB(256, 220, 228)
+    button.BackgroundColor3 = Color3.fromRGB(99, 99, 99)
     button.Text = name
     button.TextSize = 17
     button.Font = Enum.Font.GothamSemibold
-    button.TextColor3 = Color3.fromRGB(0, 0, 0)
+    button.TextColor3 = Color3.fromRGB(244, 244, 244)
     button.BorderSizePixel = 0
 
     local buttonCorner = Instance.new("UICorner", button)
@@ -893,12 +893,12 @@ local function createEmoteButton(parent, name, animationId, position)
 
     -- Hover Animation
     button.MouseEnter:Connect(function()
-        local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(256, 220, 228)})
+        local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(99,99,99)})
         hoverTween:Play()
     end)
 
     button.MouseLeave:Connect(function()
-        local leaveTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(256, 220, 228)})
+        local leaveTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(99,99,99)})
         leaveTween:Play()
     end)
 
@@ -1012,7 +1012,7 @@ local function createEmoteGui()
     emoteFrame.Name = "EmoteFrame"
     emoteFrame.Size = UDim2.new(0, 241, 0, 392) -- Increased width from 195 to 250
     emoteFrame.Position = UDim2.new(0.01, 0, 0.59, 0)
-    emoteFrame.BackgroundColor3 = Color3.fromRGB(256, 236, 244)
+    emoteFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     emoteFrame.BorderSizePixel = 0
 
     local uiCorner = Instance.new("UICorner", emoteFrame)
@@ -1041,7 +1041,7 @@ local function createEmoteGui()
     titleLabel.Text = "EMOTES"
     titleLabel.TextSize = 28
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextColor3 = Color3.fromRGB(0, 0, 0)
+    titleLabel.TextColor3 = Color3.fromRGB(211, 211, 211)
 
     -- Add Minimize Button
     local minimizeButton = Instance.new("ImageButton", screenGui)
