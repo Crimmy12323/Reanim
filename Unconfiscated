@@ -286,17 +286,15 @@ local function setGhostEnabled(newState)
     end
 end
 
--- NEW SECTION: Fake Animation on Ghost (Fake) Character --
 local fakeAnimStop
 local function stopFakeAnimation()
     fakeAnimStop = true
-    fakeAnimRunning = false -- Ensure the loop breaks
+    fakeAnimRunning = false
     for i,script in pairs(ghostClone:GetChildren()) do
         if script:IsA("LocalScript") and script.Enabled == false then
             script.Enabled=true
         end
     end
-    -- Reset body parts to original positions
     if ghostClone then
         for motor, orig in pairs(ghostOriginalMotorCFrames) do
             if motor and motor:IsA("Motor6D") then
@@ -305,7 +303,6 @@ local function stopFakeAnimation()
             end
         end
 
-        -- Reset velocity on all body parts
         for _, partName in ipairs(bodyParts) do
             local part = ghostClone:FindFirstChild(partName)
             if part and part:IsA("BasePart") then
@@ -317,7 +314,7 @@ local function stopFakeAnimation()
 end
 local fakeAnimRunning = false
 fakeAnimStop = false
-local fakeAnimSpeed = 1.2 -- Default speed (1.0 = 100%)
+local fakeAnimSpeed = 1.1
 local function playFakeAnimation(animationId)
     if not ghostClone then
         warn("No fake character available!")
@@ -328,11 +325,9 @@ local function playFakeAnimation(animationId)
         stopFakeAnimation()
     end
     wait(0.1)
-    -- Reset ghostClone scaling so it's at its original size
     cloneSize = 1
     cloneWidth = 1    updateCloneScale()
 
-    -- Reset joints to original values before applying animation transforms
     for motor, orig in pairs(ghostOriginalMotorCFrames) do
         motor.C0 = orig.C0
     end
@@ -345,7 +340,6 @@ local function playFakeAnimation(animationId)
         return
     end
 
-    -- Get the joints from ghostClone (assuming an R15 rig)
     local character = ghostClone
     local rootPart = character:WaitForChild("HumanoidRootPart")
     local head = character:WaitForChild("Head")
@@ -408,13 +402,13 @@ local function playFakeAnimation(animationId)
             break
         end
 
-        pcall(function() -- Add pcall to handle errors gracefully
+        pcall(function()
             local keyframes = NeededAssets:GetKeyframes()
             for ii = 1, #keyframes do
             if fakeAnimStop then break end
 
             local currentFrame = keyframes[ii]
-            local nextFrame = keyframes[ii + 1] or keyframes[1] -- Loop back to first frame
+            local nextFrame = keyframes[ii + 1] or keyframes[1]
             local currentTime = currentFrame.Time
             local nextTime = nextFrame.Time
             if nextTime <= currentTime then
@@ -427,7 +421,7 @@ local function playFakeAnimation(animationId)
             while tick() - startTime < frameLength and not fakeAnimStop do
                 local alpha = (tick() - startTime) / frameLength
                 
-                pcall(function() -- Add nested pcall for pose updates
+                pcall(function()
                 for _, currentPose in pairs(currentFrame:GetDescendants()) do
                     local nextPose = nextFrame:FindFirstChild(currentPose.Name, true)
                     local motor = Joints[currentPose.Name]
@@ -445,16 +439,19 @@ local function playFakeAnimation(animationId)
             end
         end)
         
-        -- Small delay to prevent tight loops if errors occur
         wait(0.03)
         end
     end)
     end
--- End of Fake Animation Section
 
--- NEW: Keybind Handling outside GUI
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    if gameProcessedEvent then return end -- Don't process if chat or other UI is using input
+    if gameProcessedEvent then return end
+
+    if input.KeyCode == Enum.KeyCode.R then
+        stopFakeAnimation()
+        return
+    end
+
     if input.UserInputType == Enum.UserInputType.Keyboard then
         for animName, keyCode in pairs(animationKeybinds) do
             if input.KeyCode == keyCode then
@@ -508,10 +505,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
                     {"What You Want ID", "112811217802231"}
                 }
 
-                -- Find the animation ID for the given animation name
                 local animationId = nil
                 for _, emote in ipairs(emotes) do
-                    if emote[1] == animName then
+                    if (emote[1] == animName) then
                         animationId = emote[2]
                         break
                     end
@@ -519,32 +515,29 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
 
                 if animationId then
                     if fakeAnimRunning then
-                        stopFakeAnimation() -- Stop any currently running animation
+                        stopFakeAnimation()
                     else
-                        playFakeAnimation(animationId) -- Play the animation
+                        playFakeAnimation(animationId)
                     end
                 else
                     warn("Animation ID not found for keybind: " .. animName)
                 end
-                return -- Stop checking after finding a match
+                return 
             end
         end
     end
 end)
 
--- Initialization
 LocalPlayer = Players.LocalPlayer
 
--- Monitor character reset and force disable reanimation
 LocalPlayer.CharacterAdded:Connect(function(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
     if humanoid then
         humanoid.Died:Connect(function()
             if ghostEnabled then
-                -- Delay the reset process
-                humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false) -- Temporarily disable the Dead state
-                task.delay(0.5, function() -- Delay for 0.5 seconds
-                    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true) -- Re-enable the Dead state
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                task.delay(0.5, function()
+                    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
                     humanoid:TakeDamage(humanoid.MaxHealth)
                 end)
 
@@ -565,7 +558,6 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     if humanoid then
         humanoid.Died:Connect(function()
             if ghostEnabled then
-                -- Disable reanimation when the player dies
                 setGhostEnabled(false)
                 local toggleButton = gui:FindFirstChild("ToggleButton", true)
                 if toggleButton then
@@ -577,27 +569,23 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     end
 end)
 
--- StarterGui.ScreenGui.Emotes
 local function C_e()
     local player = Players.LocalPlayer
 
-    -- Reference to the GUI buttons inside the scrolling frame
     local emoteFrame = player:WaitForChild("PlayerGui"):WaitForChild("EmoteGui"):WaitForChild("EmoteFrame")
     local scrollingFrame = emoteFrame:WaitForChild("ScrollingFrame")
     local emoteButton1 = scrollingFrame:WaitForChild("Emote1")
     local emoteButton2 = scrollingFrame:WaitForChild("Emote2")
     local emoteButton3 = scrollingFrame:WaitForChild("Emote3")
 
-    -- Function to play the animation using the reanimation system
     local function playReanimation(animationId)
-        if ghostEnabled then -- Ensure ghost mode is enabled
+        if ghostEnabled then
             playFakeAnimation(animationId)
         else
             warn("Reanimation is not enabled!")
         end
     end
 
-    -- Connect the buttons to play the animation
     emoteButton1.MouseButton1Click:Connect(function()
         playReanimation(animationId1)
     end)
@@ -613,51 +601,12 @@ end
 
 task.spawn(C_e)
 
--- StarterGui.ScreenGui.Emotes
-local function C_e()
-    local player = Players.LocalPlayer
-
-    -- Reference to the GUI buttons inside the scrolling frame
-    local emoteFrame = player:WaitForChild("PlayerGui"):WaitForChild("EmoteGui"):WaitForChild("EmoteFrame")
-    local scrollingFrame = emoteFrame:WaitForChild("ScrollingFrame")
-    local emoteButton1 = scrollingFrame:WaitForChild("Emote1")
-    local emoteButton2 = scrollingFrame:WaitForChild("Emote2")
-    local emoteButton3 = scrollingFrame:WaitForChild("Emote3")
-
-    -- Function to play the animation using the reanimation system
-    local function playReanimation(animationId)
-        if ghostEnabled then -- Ensure ghost mode is enabled
-            playFakeAnimation(animationId)
-        else
-            warn("Reanimation is not enabled!")
-        end
-    end
-
-    -- Connect the buttons to play the animation
-    emoteButton1.MouseButton1Click:Connect(function()
-        playReanimation(animationId1)
-    end)
-
-    emoteButton2.MouseButton1Click:Connect(function()
-        playReanimation(animationId2)
-    end)
-
-    emoteButton3.MouseButton1Click:Connect(function()
-        playReanimation(animationId3)
-    end)
-end
-
-task.spawn(C_e)
--- createEmoteGui()
-
--- Add the new GUI code
 local G2L = {};
 
--- StarterGui.ScreenGui
-G2L["1"] = Instance.new("ScreenGui", game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"));
-G2L["1"]["ZIndexBehavior"] = Enum.ZIndexBehavior.Sibling;
+G2L["1"] = Instance.new("ScreenGui", game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"))
+G2L["1"]["ZIndexBehavior"] = Enum.ZIndexBehavior.Sibling
+G2L["1"].ResetOnSpawn = false
 
--- StarterGui.ScreenGui.MainFrame
 G2L["2"] = Instance.new("Frame", G2L["1"]);
 G2L["2"]["BorderSizePixel"] = 0;
 G2L["2"]["BackgroundColor3"] = Color3.fromRGB(23, 23, 25);
@@ -667,11 +616,9 @@ G2L["2"]["Position"] = UDim2.new(0, 667, 0, 447);
 G2L["2"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["2"]["Name"] = [[MainFrame]];
 
--- StarterGui.ScreenGui.MainFrame.UICorner
 G2L["3"] = Instance.new("UICorner", G2L["2"]);
 G2L["3"]["CornerRadius"] = UDim.new(0, 7);
 
--- StarterGui.ScreenGui.TopBar
 G2L["4"] = Instance.new("Frame", G2L["2"]);
 G2L["4"]["BorderSizePixel"] = 0;
 G2L["4"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35);
@@ -680,11 +627,9 @@ G2L["4"]["Position"] = UDim2.new(0, 1, 0, 0);
 G2L["4"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["4"]["Name"] = [[TopBar]];
 
--- StarterGui.ScreenGui.TopBar.UICorner
 G2L["5"] = Instance.new("UICorner", G2L["4"]);
 G2L["5"]["CornerRadius"] = UDim.new(0, 7);
 
--- StarterGui.ScreenGui.TopBar.TextLabel
 G2L["6"] = Instance.new("TextLabel", G2L["4"]);
 G2L["6"]["BorderSizePixel"] = 0;
 G2L["6"]["TextSize"] = 18;
@@ -697,41 +642,36 @@ G2L["6"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["6"]["Text"] = [[Sentinel Reanimation]];
 G2L["6"]["Position"] = UDim2.new(0.01852, 0, 0.03846, 0);
 
--- Add a close button to the top-right corner of the GUI
-local closeButton = Instance.new("ImageButton", G2L["4"]) -- Add to the TopBar
+local closeButton = Instance.new("ImageButton", G2L["4"])
 closeButton.Name = "CloseButton"
-closeButton.Size = UDim2.new(0, 24, 0, 24) -- Adjust size as needed
-closeButton.Position = UDim2.new(1, -16, 0.72, -12) -- Top-right corner, slightly inset
-closeButton.AnchorPoint = Vector2.new(1, 0.5) -- Align to the top-right
-closeButton.BackgroundTransparency = 1 -- No background
-closeButton.Image = "rbxassetid://10152135063" -- Default icon
+closeButton.Size = UDim2.new(0, 24, 0, 24)
+closeButton.Position = UDim2.new(1, -16, 0.72, -12)
+closeButton.AnchorPoint = Vector2.new(1, 0.5)
+closeButton.BackgroundTransparency = 1
+closeButton.Image = "rbxassetid://10152135063"
 
--- Hover effect
 closeButton.MouseEnter:Connect(function()
-    closeButton.Image = "rbxassetid://104301854198764" -- Change to hover icon
+    closeButton.Image = "rbxassetid://104301854198764"
 end)
 
 closeButton.MouseLeave:Connect(function()
-    closeButton.Image = "rbxassetid://10152135063" -- Revert to default icon
+    closeButton.Image = "rbxassetid://10152135063"
 end)
 
--- Hover effect
 closeButton.MouseEnter:Connect(function()
-    local hoverTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 0, 0)}) -- Change to red
+    local hoverTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 0, 0)})
     hoverTween:Play()
 end)
 
 closeButton.MouseLeave:Connect(function()
-    local leaveTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 255, 255)}) -- Revert to white
+    local leaveTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 255, 255)})
     leaveTween:Play()
 end)
 
--- Close functionality
 closeButton.MouseButton1Click:Connect(function()
-    G2L["1"]:Destroy() -- Destroy the entire GUI
+    G2L["1"]:Destroy()
 end)
 
--- StarterGui.ScreenGui.Search
 G2L["7"] = Instance.new("Frame", G2L["2"]);
 G2L["7"]["BorderSizePixel"] = 0;
 G2L["7"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35);
@@ -740,18 +680,15 @@ G2L["7"]["Position"] = UDim2.new(0, 12, 0, 66);
 G2L["7"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["7"]["Name"] = [[Search]];
 
--- StarterGui.ScreenGui.Search.UICorner
 G2L["8"] = Instance.new("UICorner", G2L["7"]);
 G2L["8"]["CornerRadius"] = UDim.new(0, 4);
 
--- StarterGui.ScreenGui.Search.UIStroke
 G2L["9"] = Instance.new("UIStroke", G2L["7"]);
 G2L["9"]["Transparency"] = 0.23;
 G2L["9"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
 G2L["9"]["Thickness"] = 0.7;
 G2L["9"]["Color"] = Color3.fromRGB(58, 58, 58);
 
--- StarterGui.ScreenGui.Search.TextBox
 G2L["a"] = Instance.new("TextBox", G2L["7"]);
 G2L["a"]["CursorPosition"] = -1;
 G2L["a"]["TextXAlignment"] = Enum.TextXAlignment.Left;
@@ -766,7 +703,6 @@ G2L["a"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["a"]["Text"] = [[Search animations...]];
 G2L["a"]["BackgroundTransparency"] = 1;
 
--- StarterGui.ScreenGui.Search.ImageLabel
 G2L["b"] = Instance.new("ImageLabel", G2L["7"]);
 G2L["b"]["BorderSizePixel"] = 0;
 G2L["b"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
@@ -776,7 +712,6 @@ G2L["b"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["b"]["BackgroundTransparency"] = 1;
 G2L["b"]["Position"] = UDim2.new(0.04422, 0, 0.27778, 0);
 
--- StarterGui.ScreenGui.Search.TextButton
 G2L["c"] = Instance.new("TextButton", G2L["7"]);
 G2L["c"]["BorderSizePixel"] = 0;
 G2L["c"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
@@ -788,11 +723,9 @@ G2L["c"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["c"]["Text"] = [[Add]];
 G2L["c"]["Position"] = UDim2.new(0.78912, 0, 0, 0);
 
--- StarterGui.ScreenGui.Search.TextButton.UICorner
 G2L["d"] = Instance.new("UICorner", G2L["c"]);
 G2L["d"]["CornerRadius"] = UDim.new(0, 4);
 
--- StarterGui.ScreenGui.Buttons
 G2L["e"] = Instance.new("Frame", G2L["2"]);
 G2L["e"]["BorderSizePixel"] = 0;
 G2L["e"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35);
@@ -801,18 +734,15 @@ G2L["e"]["Position"] = UDim2.new(0, 12, 0, 118);
 G2L["e"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["e"]["Name"] = [[Buttons]];
 
--- StarterGui.ScreenGui.Buttons.UICorner
 G2L["f"] = Instance.new("UICorner", G2L["e"]);
 G2L["f"]["CornerRadius"] = UDim.new(0, 4);
 
--- StarterGui.ScreenGui.Buttons.UIStroke
 G2L["10"] = Instance.new("UIStroke", G2L["e"]);
 G2L["10"]["Transparency"] = 0.23;
 G2L["10"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
 G2L["10"]["Thickness"] = 0.7;
 G2L["10"]["Color"] = Color3.fromRGB(58, 58, 58);
 
--- StarterGui.ScreenGui.Enable
 G2L["18"] = Instance.new("Frame", G2L["2"]);
 G2L["18"]["BorderSizePixel"] = 0;
 G2L["18"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35);
@@ -821,18 +751,15 @@ G2L["18"]["Position"] = UDim2.new(0, 12, 0, 415);
 G2L["18"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["18"]["Name"] = [[Enable]];
 
--- StarterGui.ScreenGui.Enable.UIStroke
 G2L["19"] = Instance.new("UIStroke", G2L["18"]);
 G2L["19"]["Transparency"] = 0.23;
 G2L["19"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
 G2L["19"]["Thickness"] = 0.7;
 G2L["19"]["Color"] = Color3.fromRGB(58, 58, 58);
 
--- StarterGui.ScreenGui.Enable.UICorner
 G2L["1a"] = Instance.new("UICorner", G2L["18"]);
 G2L["1a"]["CornerRadius"] = UDim.new(0, 4);
 
--- StarterGui.ScreenGui.Enable.TextLabel
 G2L["1b"] = Instance.new("TextLabel", G2L["18"]);
 G2L["1b"]["BorderSizePixel"] = 0;
 G2L["1b"]["TextSize"] = 14;
@@ -845,14 +772,54 @@ G2L["1b"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["1b"]["Text"] = [[Enable R15 Reanimation]];
 G2L["1b"]["Position"] = UDim2.new(0.15986, 0, 0.11111, 0);
 
--- Add an invisible button behind the "Enable R15 Reanimation" text
 G2L["1c"] = Instance.new("TextButton", G2L["18"]);
-G2L["1c"]["BackgroundTransparency"] = 1; -- Make it invisible
-G2L["1c"]["Size"] = UDim2.new(1, 0, 1, 0); -- Cover the entire frame
-G2L["1c"]["Text"] = ""; -- No text
+G2L["1c"]["BackgroundTransparency"] = 1;
+G2L["1c"]["Size"] = UDim2.new(1, 0, 1, 0);
+G2L["1c"]["Text"] = "";
 G2L["1c"]["Name"] = [[EnableButton]];
 
--- Add this to the "EnableButton" click event
+local TweenService = game:GetService("TweenService")
+
+local hoverColor = Color3.fromRGB(57, 190, 249)
+local normalColor = Color3.fromRGB(207, 207, 207)
+local maroonColor = Color3.fromRGB(171, 27, 27)
+
+local tweenInfo = TweenInfo.new(
+    0.25,
+    Enum.EasingStyle.Quad,
+    Enum.EasingDirection.Out
+)
+
+local function tweenTextColor(label, targetColor)
+    TweenService:Create(label, tweenInfo, {TextColor3 = targetColor}):Play()
+end
+
+G2L["1c"].MouseEnter:Connect(function()
+    tweenTextColor(G2L["1b"], hoverColor)
+end)
+
+G2L["1c"].MouseLeave:Connect(function()
+    local textLabel = G2L["1b"]
+    if textLabel.Text:lower() == "disable r15 reanimation" then
+        tweenTextColor(textLabel, maroonColor)
+    else
+        tweenTextColor(textLabel, normalColor)
+    end
+end)
+
+G2L["1c"].MouseEnter:Connect(function()
+    local textLabel = G2L["1b"]
+    if textLabel.Text:lower() == "enable r15 reanimation" then
+        tweenTextColor(textLabel, hoverColor)
+    else
+        tweenTextColor(textLabel, hoverColor)
+    end
+end)
+
+if G2L["1b"].Text:lower() == "disable r15 reanimation" then
+    G2L["1b"].TextColor3 = Color3.fromRGB(171, 27, 27)
+end
+
 G2L["1c"].MouseButton1Click:Connect(function()
     if ghostEnabled then
         setGhostEnabled(false)
@@ -861,34 +828,29 @@ G2L["1c"].MouseButton1Click:Connect(function()
     else
         setGhostEnabled(true)
         G2L["1b"].Text = "Disable R15 Reanimation"
-        G2L["1b"].TextColor3 = Color3.fromRGB(255, 85, 85)
+        G2L["1b"].TextColor3 = Color3.fromRGB(171, 27, 27)
     end
 end)
 
--- Cache for loaded animations
 local loadedAnimations = {}
 local currentPlayingAnimation = nil
 
--- Function to play or stop the animation
 local function toggleFakeAnimation(animationId)
     if not ghostEnabled then
         warn("Reanimation is not enabled!")
         return
     end
 
-    -- If the same animation is already playing, stop it
     if currentPlayingAnimation == animationId then
         stopFakeAnimation()
         currentPlayingAnimation = nil
         return
     end
 
-    -- Stop any currently playing animation
     if currentPlayingAnimation then
         stopFakeAnimation()
     end
 
-    -- Load the animation if not already cached
     if not loadedAnimations[animationId] then
         local success, animation = pcall(function()
             return game:GetObjects("rbxassetid://" .. animationId)[1]
@@ -901,25 +863,21 @@ local function toggleFakeAnimation(animationId)
         end
     end
 
-    -- Play the animation
     currentPlayingAnimation = animationId
     playFakeAnimation(animationId)
 end
 
--- Update button click connection to use toggleFakeAnimation with smooth color transition
 local function addButtonsToFrame()
-    -- Create a scrolling frame for the emotes
     local parent = G2L["e"]
     local scrollingFrame = Instance.new("ScrollingFrame", parent)
     scrollingFrame.Name = "EmoteScrollingFrame"
     scrollingFrame.Size = UDim2.new(1, 0, 1, 0)
-    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2000) -- Adjust canvas size for scrolling
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2000)
     scrollingFrame.ScrollBarThickness = 5
     scrollingFrame.BackgroundTransparency = 1
 
-    local yOffset = 10 -- Start with 10 pixels down instead of 0
+    local yOffset = 10
 
-    -- List of emotes to add
     local emotes = {
         {"Attraction", "73737524314910"},
         {"Back On 74 ID", "108088087568172"},
@@ -991,18 +949,16 @@ local function addButtonsToFrame()
         {"What You Want ID", "112811217802231"}
     }
 
-    -- Sort the emotes alphabetically by name
     table.sort(emotes, function(a, b)
         return a[1]:lower() < b[1]:lower()
     end)
 
-    local buttons = {} -- Store references to buttons for filtering
+    local buttons = {}
 
     for _, emote in ipairs(emotes) do
         local emoteName = emote[1]
         local emoteId = emote[2]
 
-        -- Create a button for each emote
         local button = Instance.new("TextButton", scrollingFrame)
         button.Name = emoteName
         button.Size = UDim2.new(1, -20, 0, 32)
@@ -1023,7 +979,6 @@ local function addButtonsToFrame()
         local buttonCorner = Instance.new("UICorner", button)
         buttonCorner.CornerRadius = UDim.new(0, 4)
     
-        -- Hover Animation
         button.MouseEnter:Connect(function()
             local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
             hoverTween:Play()
@@ -1034,26 +989,27 @@ local function addButtonsToFrame()
             leaveTween:Play()
         end)
 
-        -- Toggle animation with smooth color transition when button is clicked
         button.MouseButton1Click:Connect(function()
-            local clickTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(57, 190, 249)})
+            button.TextColor3 = Color3.fromRGB(244, 244, 244)
+
+            local clickTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(57, 190, 249)})
             clickTween:Play()
             clickTween.Completed:Connect(function()
-                local resetTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
+                local resetTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(244, 244, 244)})
                 resetTween:Play()
             end)
+
             toggleFakeAnimation(emoteId)
         end)
 
-        table.insert(buttons, button) -- Add button to the list for filtering
-        yOffset = yOffset + 40 -- Increment vertical offset for the next button
+        table.insert(buttons, button)
+        yOffset = yOffset + 40
     end
 
-    -- Search functionality
-    local searchBox = G2L["a"] -- Reference to the search TextBox
+    local searchBox = G2L["a"]
     searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local searchText = searchBox.Text:lower()
-        yOffset = 10 -- Reset yOffset for repositioning buttons
+        yOffset = 10
 
         for _, button in ipairs(buttons) do
             if button.Name:lower():find(searchText) then
@@ -1065,15 +1021,12 @@ local function addButtonsToFrame()
             end
         end
 
-        -- Update the canvas size based on the number of visible buttons
         scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     end)
 end
 
--- Call the function to add buttons
 addButtonsToFrame()
 
--- Smooth drag functionality for the entire GUI
 local UIS = game:GetService("UserInputService")
 local dragging = false
 local dragInput, dragStart, startPos
