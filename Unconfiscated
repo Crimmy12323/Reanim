@@ -502,7 +502,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
                     {"The Floss ID", "9003921069"},
                     {"Verve ID", "119993822512014"},
                     {"The Viper ID", "109195495448084"},
-                    {"What You Want ID", "112811217802231"}
+                    {"What You Want ID", "112811217802231"},
+                    {"Goofy Twerk ID", "112811217802231"}
                 }
 
                 local animationId = nil
@@ -867,6 +868,8 @@ local function toggleFakeAnimation(animationId)
     playFakeAnimation(animationId)
 end
 
+local showR6Label = true -- Configurable variable to enable or disable R6 labels
+
 local function addButtonsToFrame()
     local parent = G2L["e"]
     local scrollingFrame = Instance.new("ScrollingFrame", parent)
@@ -879,74 +882,56 @@ local function addButtonsToFrame()
     local yOffset = 10
 
     local emotes = {
-        {"Attraction", "73737524314910"},
-        {"Back On 74 ID", "108088087568172"},
-        {"Best Mates", "9836127174"},
-        {"Swastika (Big)", "94631359696320"},
-        {"Billy Bounce ID", "96342044032488"},
-        {"Boogie Bomb ID", "90159280044964"},
-        {"Boogie Down ID", "83261869707370"},
-        {"Breakin", "9566205864"},
-        {"California Gurls ID", "131457845572132"},
-        {"Chase Me Down ID", "97455319886162"},
-        {"Classy", "16820005994"},
-        {"Cupid's Arrow ID", "122288826913668"},
-        {"Dancery ID", "135978042300523"},
-        {"Default Dance ID", "9836885605"},
-        {"Desirable ID", "80125132098992"},
-        {"Disco Fever ID", "9836369561"},
-        {"Electro Shuffle ID", "9116910876"},
-        {"Electro Swing ID", "7839963379"},
-        {"Evil Plan ID", "99449894581351"},
-        {"Floss", "9003921069"},
-        {"FreeStylin ID", "107995227083576"},
-        {"Fresh ID", "9116897929"},
-        {"Go Muffasa", "8459864580"},
-        {"Groove Destroyer ID", "18147813725"},
-        {"Griddy ID", "135342670717393"},
-        {"Head Banger ID", "114573617035275"},
-        {"Headbanger", "6665072119"},
-        {"Hey Now ID", "7124753337"},
-        {"Hot Marat ID", "7107202783"},
-        {"Houdini", "134583508076641"},
-        {"Hype ID", "121532134633896"},
-        {"Infinite Dab ID", "74538409545244"},
-        {"Jabba Switchway ID", "8229514367"},
-        {"Jubi Slide ID", "16570530493"},
-        {"Lazer Blast", "9634449536"},
-        {"Look At Me ID", "129004554500202"},
-        {"Lucid Dreams ID", "108895351743195"},
-        {"Maximum Bounce ID", "8703876822"},
-        {"Miku Live ID", "102039871027058"},
-        {"Miku Miku Beam ID", "116802170205791"},
-        {"Mr Blue Sky!!! ID", "8603017969"},
-        {"No Cure ID", "76827103391437"},
-        {"Orange Justice ID", "11212163754"},
-        {"Outwest", "9848086412"},
-        {"Party Hips ID", "91664350716653"},
-        {"Phonky Turn ID", "122815417402057"},
-        {"Poki ID", "83405509049719"},
-        {"Popular Vibe", "15643535842"},
-        {"Pull Up ID", "8871805743"},
-        {"Rap Monster", "128304521927170"},
-        {"Rage", "9460050005"},
-        {"Reanimated ID", "7757686890"},
-        {"Scenario ID", "8924083749"},
-        {"Slalom Style ID", "123624215915471"},
-        {"Swastika (Small)", "93170225110433"},
-        {"Smooth Slide", "17756446909"},
-        {"Snoop's Walk ID", "95567389800091"},
-        {"Stuck", "7416744362"},
-        {"Take It Slow", "128688691786766"},
-        {"Take The L ID", "114109549820426"},
-        {"The Dogg", "91400732124578"},
-        {"The Floss ID", "9003921069"},
-        {"The Viper ID", "109195495448084"},
-        {"The Worm", "7160307855"},
-        {"Toosie Slide ID", "8230248004"},
-        {"Tidy", "6657942302"},
-        {"Verve ID", "119993822512014"},
-        {"What You Want ID", "112811217802231"}
+        {"Back On 74 ID", "108088087568172", false},
+        {"Boogie Bomb ID", "90159280044964", false},
+        {"Billy Bounce ID", "96342044032488", false},
+        {"Boogie Down ID", "83261869707370", false},
+        {"Cupid's Arrow ID", "122288826913668", false},
+        {"California Gurls ID", "131457845572132", false},
+        {"Chase Me Down ID", "97455319886162", false},
+        {"Default Dance ID", "9836885605", false},
+        {"Dancery ID", "135978042300523", false},
+        {"Desirable ID", "80125132098992", false},
+        {"Disco Fever ID", "9836369561", false},
+        {"Evil Plan ID", "99449894581351", false},
+        {"Electro Shuffle ID", "9116910876", false},
+        {"Electro Swing ID", "7839963379", false},
+        {"FreeStylin ID", "107995227083576", false},
+        {"Fresh ID", "9116897929", false},
+        {"Groove Destroyer ID", "18147813725", false},
+        {"Griddy ID", "135342670717393", false},
+        {"Hot Marat ID", "7107202783", false},
+        {"Hakari Dance", "73789839912852", true},
+        {"Hey Now ID", "7124753337", false},
+        {"Hype ID", "121532134633896", false},
+        {"Head Banger ID", "114573617035275", false},
+        {"Infinite Dab ID", "74538409545244", false},
+        {"Jabba Switchway ID", "8229514367", false},
+        {"Jubi Slide ID", "16570530493", false},
+        {"Lucid Dreams ID", "108895351743195", false},
+        {"Look At Me ID", "129004554500202", false},
+        {"Mr Blue Sky!!! ID", "8603017969", false},
+        {"Maximum Bounce ID", "8703876822", false},
+        {"Miku Live ID", "102039871027058", false},
+        {"Miku Miku Beam ID", "116802170205791", false},
+        {"No Cure ID", "76827103391437", false},
+        {"Orange Justice ID", "11212163754", false},
+        {"Phonky Turn ID", "122815417402057", false},
+        {"Pull Up ID", "8871805743", false},
+        {"Poki ID", "83405509049719", false},
+        {"Party Hips ID", "91664350716653", false},
+        {"Reanimated ID", "7757686890", false},
+        {"Scenario ID", "8924083749", false},
+        {"Snoop's Walk ID", "95567389800091", false},
+        {"Slalom Style ID", "123624215915471", false},
+        {"Toosie Slide ID", "8230248004", false},
+        {"Take The L ID", "114109549820426", false},
+        {"The Floss ID", "9003921069", false},
+        {"Verve ID", "119993822512014", false},
+        {"The Viper ID", "109195495448084", false},
+        {"What You Want ID", "112811217802231", false},
+        {"Unlock It", "104997186005133", true},
+        {"Goofy Twerk ID", "71819565973448"}
     }
 
     table.sort(emotes, function(a, b)
@@ -958,6 +943,7 @@ local function addButtonsToFrame()
     for _, emote in ipairs(emotes) do
         local emoteName = emote[1]
         local emoteId = emote[2]
+        local isR6 = emote[3]
 
         local button = Instance.new("TextButton", scrollingFrame)
         button.Name = emoteName
@@ -978,7 +964,22 @@ local function addButtonsToFrame()
     
         local buttonCorner = Instance.new("UICorner", button)
         buttonCorner.CornerRadius = UDim.new(0, 4)
-    
+
+        if showR6Label and isR6 then
+            local r6Label = Instance.new("TextLabel", button)
+            r6Label.Size = UDim2.new(0, 50, 1, 0)
+            r6Label.Position = UDim2.new(0, -55, 0, 0)
+            r6Label.BackgroundColor3 = Color3.fromRGB(57, 190, 249)
+            r6Label.Text = "R6"
+            r6Label.TextSize = 14
+            r6Label.Font = Enum.Font.GothamBold
+            r6Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            r6Label.BorderSizePixel = 0
+
+            local labelCorner = Instance.new("UICorner", r6Label)
+            labelCorner.CornerRadius = UDim.new(0, 4)
+        end
+
         button.MouseEnter:Connect(function()
             local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
             hoverTween:Play()
