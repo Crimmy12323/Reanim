@@ -931,7 +931,12 @@ local function addButtonsToFrame()
         {"The Viper ID", "109195495448084", false},
         {"What You Want ID", "112811217802231", false},
         {"Unlock It", "104997186005133", true},
-        {"Goofy Twerk ID", "71819565973448"}
+        {"Goofy Twerk ID", "71819565973448", false},
+        {"Sicko Mode ID", "100379545014024", true},
+        {"Stock Shuffle ID", "100379545014024", true},
+        {"Billy Bounce R6 ID", "104963686949319", true},
+        {"Embarrassing ID", "110978487197470", true},
+        {"Arona ID", "134041849348680", true},
     }
 
     table.sort(emotes, function(a, b)
