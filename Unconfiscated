@@ -933,7 +933,7 @@ local function addButtonsToFrame()
         {"Unlock It", "104997186005133", true},
         {"Goofy Twerk ID", "71819565973448", false},
         {"Sicko Mode ID", "100379545014024", true},
-        {"Stock Shuffle ID", "100379545014024", true},
+        {"Stock Shuffle ID", "95645590336118", true},
         {"Billy Bounce R6 ID", "104963686949319", true},
         {"Embarrassing ID", "110978487197470", true},
         {"Arona ID", "134041849348680", true},
