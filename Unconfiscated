@@ -469,12 +469,9 @@ local function toggleFakeAnimation(animationId)
         return
     end
 
-    if currentPlayingAnimation == animationId then
-        stopFakeAnimation()
-        currentPlayingAnimation = nil
-        return
-    end
-
+    -- Removed the check for currentPlayingAnimation == animationId
+    -- So it will always play the animation when clicked
+    
     if currentPlayingAnimation then
         stopFakeAnimation()
     end
