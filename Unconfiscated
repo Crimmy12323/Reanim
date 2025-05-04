@@ -1,28 +1,23 @@
--- Services
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
+Players = game:GetService("Players")
+Workspace = game:GetService("Workspace")
+UserInputService = game:GetService("UserInputService")
+RunService = game:GetService("RunService")
+ReplicatedStorage = game:GetService("ReplicatedStorage")
+TweenService = game:GetService("TweenService")
+LocalPlayer = Players.LocalPlayer
+HttpService = game:GetService("HttpService")
 
--- Settings
 local ghostEnabled = false
-local showR6Label = true
+local originalCharacter
+local ghostClone
+local originalCFrame
+local originalAnimateScript
+local updateConnection
+local ghostOriginalHipHeight
 local cloneSize = 1
 local cloneWidth = 1
-local fakeAnimSpeed = 1.1
-
--- State variables
-local originalCharacter, ghostClone, originalCFrame, originalAnimateScript, updateConnection
-local ghostOriginalHipHeight, ghostOriginalSizes, ghostOriginalMotorCFrames = {}, {}, {}
-local loadedAnimations = {custom = {}}
-local currentPlayingAnimation = nil
-local fakeAnimRunning, fakeAnimStop = false, false
-local mainGUI, addEmoteGUI
-
--- Body parts for ragdoll
+local ghostOriginalSizes = {}
+local ghostOriginalMotorCFrames = {}
 local bodyParts = {
     "Head", "UpperTorso", "LowerTorso",
     "LeftUpperArm", "LeftLowerArm", "LeftHand",
@@ -30,11 +25,8 @@ local bodyParts = {
     "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
     "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }
+local animationKeybinds = {}
 
--- File path for saving animations
-local ANIMATIONS_FILE = "sentinel_animations.json"
-
--- Helper functions
 local function scaleCFrame(cf, scale)
     local pos = cf.Position * scale
     local xRot, yRot, zRot = cf:ToEulerAnglesXYZ()
@@ -63,9 +55,9 @@ local function adjustCloneToGround(clone)
     end
 end
 
+local preservedGuis = {}
 local function preserveGuis()
-    local preservedGuis = {}
-    local playerGui = Players.LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
+    local playerGui = LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
     if playerGui then
         for _, gui in ipairs(playerGui:GetChildren()) do
             if gui:IsA("ScreenGui") and gui.ResetOnSpawn then
@@ -74,52 +66,15 @@ local function preserveGuis()
             end
         end
     end
-    return preservedGuis
 end
 
-local function restoreGuis(preservedGuis)
+local function restoreGuis()
     for _, gui in ipairs(preservedGuis) do
         gui.ResetOnSpawn = true
     end
+    table.clear(preservedGuis)
 end
 
--- Animation saving/loading
-local function saveAnimationsToFile()
-    if not isfolder("sentinel_animations") then
-        makefolder("sentinel_animations")
-    end
-    
-    local success, json = pcall(function()
-        return HttpService:JSONEncode(loadedAnimations.custom)
-    end)
-    
-    if success then
-        writefile("sentinel_animations/"..ANIMATIONS_FILE, json)
-    else
-        warn("Failed to encode animations:", json)
-    end
-end
-
-local function loadAnimationsFromFile()
-    if not isfolder("sentinel_animations") then return end
-    if not isfile("sentinel_animations/"..ANIMATIONS_FILE) then return end
-    
-    local success, content = pcall(function()
-        return readfile("sentinel_animations/"..ANIMATIONS_FILE)
-    end)
-    
-    if not success then return end
-    
-    local success2, data = pcall(function()
-        return HttpService:JSONDecode(content)
-    end)
-    
-    if success2 and data then
-        loadedAnimations.custom = data
-    end
-end
-
--- Reanimation functions
 local function updateCloneScale()
     if not ghostClone then return end
     for part, origSize in pairs(ghostOriginalSizes) do
@@ -154,6 +109,23 @@ local function updateCloneScale()
     adjustCloneToGround(ghostClone)
 end
 
+local function updateCloneTransparency()
+    if not ghostClone then return end
+    for _, part in pairs(ghostClone:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+        end
+    end
+    local head = ghostClone:FindFirstChild("Head")
+    if head then
+        for _, child in ipairs(head:GetChildren()) do
+            if child:IsA("Decal") then
+                child.Transparency = 1
+            end
+        end
+    end
+end
+
 local function updateRagdolledParts()
     if not ghostEnabled or not originalCharacter or not ghostClone then return end
     for _, partName in ipairs(bodyParts) do
@@ -171,7 +143,7 @@ local function setGhostEnabled(newState)
     ghostEnabled = newState
 
     if ghostEnabled then
-        local char = Players.LocalPlayer.Character
+        local char = LocalPlayer.Character
         if not char then
             warn("No character found!")
             return
@@ -212,6 +184,14 @@ local function setGhostEnabled(newState)
                 part.Transparency = 1
             end
         end
+        local head = ghostClone:FindFirstChild("Head")
+        if head then
+            for _, child in ipairs(head:GetChildren()) do
+                if child:IsA("Decal") then
+                    child.Transparency = 1
+                end
+            end
+        end
 
         ghostOriginalSizes = {}
         ghostOriginalMotorCFrames = {}
@@ -234,16 +214,16 @@ local function setGhostEnabled(newState)
             originalAnimateScript.Parent = ghostClone
         end
 
-        local preservedGuis = preserveGuis()
+        preserveGuis()
         ghostClone.Parent = originalCharacter.Parent
 
         adjustCloneToGround(ghostClone)
 
-        Players.LocalPlayer.Character = ghostClone
+        LocalPlayer.Character = ghostClone
         if ghostHumanoid then
             Workspace.CurrentCamera.CameraSubject = ghostHumanoid
         end
-        restoreGuis(preservedGuis)
+        restoreGuis()
 
         if originalAnimateScript then
             originalAnimateScript.Disabled = false
@@ -289,12 +269,12 @@ local function setGhostEnabled(newState)
         end
 
         local origHumanoid = originalCharacter:FindFirstChildWhichIsA("Humanoid")
-        local preservedGuis = preserveGuis()
-        Players.LocalPlayer.Character = originalCharacter
+        preserveGuis()
+        LocalPlayer.Character = originalCharacter
         if origHumanoid then
             Workspace.CurrentCamera.CameraSubject = origHumanoid
         end
-        restoreGuis(preservedGuis)
+        restoreGuis()
 
         if animate then
             task.wait(0.1)
@@ -306,6 +286,7 @@ local function setGhostEnabled(newState)
     end
 end
 
+local fakeAnimStop
 local function stopFakeAnimation()
     fakeAnimStop = true
     fakeAnimRunning = false
@@ -331,7 +312,9 @@ local function stopFakeAnimation()
         end
     end
 end
-
+local fakeAnimRunning = false
+fakeAnimStop = false
+local fakeAnimSpeed = 1.1
 local function playFakeAnimation(animationId)
     if not ghostClone then
         warn("No fake character available!")
@@ -341,10 +324,9 @@ local function playFakeAnimation(animationId)
     if fakeAnimRunning then
         stopFakeAnimation()
     end
-    task.wait(0.1)
+    wait(0.1)
     cloneSize = 1
-    cloneWidth = 1
-    updateCloneScale()
+    cloneWidth = 1    updateCloneScale()
 
     for motor, orig in pairs(ghostOriginalMotorCFrames) do
         motor.C0 = orig.C0
@@ -401,761 +383,67 @@ local function playFakeAnimation(animationId)
     local part = Instance.new("Part")
     part.Size = Vector3.new(2048,0.1,2048)
     part.Anchored = true
-    part.Position = Players.LocalPlayer.Character.LowerTorso.Position + Vector3.new(0,-0.2,0)
+    part.Position = game.Players.LocalPlayer.Character.LowerTorso.Position + Vector3.new(0,-0.2,0)
     part.Transparency = 1
     part.Parent = workspace
-    Players.LocalPlayer.Character.Humanoid.PlatformStand = true
-    task.wait(0.1)
-    for i,script in pairs(Players.LocalPlayer.Character:GetChildren()) do
+    game.Players.LocalPlayer.Character.Humanoid.PlatformStand = true
+    wait(0.1)
+    for i,script in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
         if script:IsA("LocalScript") and script.Enabled then
             script.Enabled=false
         end
     end
-    Players.LocalPlayer.Character.Humanoid.PlatformStand = false
+    game.Players.LocalPlayer.Character.Humanoid.PlatformStand = false
     part:Destroy()
-    
-    task.spawn(function()
+    spawn(function()
         while fakeAnimRunning do
-            if fakeAnimStop then
-                fakeAnimRunning = false
-                break
+        if fakeAnimStop then
+            fakeAnimRunning = false
+            break
+        end
+
+        pcall(function()
+            local keyframes = NeededAssets:GetKeyframes()
+            for ii = 1, #keyframes do
+            if fakeAnimStop then break end
+
+            local currentFrame = keyframes[ii]
+            local nextFrame = keyframes[ii + 1] or keyframes[1]
+            local currentTime = currentFrame.Time
+            local nextTime = nextFrame.Time
+            if nextTime <= currentTime then
+                nextTime = nextTime + NeededAssets.Length
             end
 
-            pcall(function()
-                local keyframes = NeededAssets:GetKeyframes()
-                for ii = 1, #keyframes do
-                    if fakeAnimStop then break end
-
-                    local currentFrame = keyframes[ii]
-                    local nextFrame = keyframes[ii + 1] or keyframes[1]
-                    local currentTime = currentFrame.Time
-                    local nextTime = nextFrame.Time
-                    if nextTime <= currentTime then
-                        nextTime = nextTime + NeededAssets.Length
-                    end
-
-                    local frameLength = (nextTime - currentTime) / fakeAnimSpeed
-                    local startTime = tick()
-                    
-                    while tick() - startTime < frameLength and not fakeAnimStop do
-                        local alpha = (tick() - startTime) / frameLength
-                        
-                        pcall(function()
-                            for _, currentPose in pairs(currentFrame:GetDescendants()) do
-                                local nextPose = nextFrame:FindFirstChild(currentPose.Name, true)
-                                local motor = Joints[currentPose.Name]
-                                
-                                if motor and nextPose and ghostOriginalMotorCFrames[motor] then
-                                    local currentCF = ghostOriginalMotorCFrames[motor].C0 * currentPose.CFrame
-                                    local nextCF = ghostOriginalMotorCFrames[motor].C0 * nextPose.CFrame
-                                    motor.C0 = currentCF:Lerp(nextCF, alpha)
-                                end
-                            end
-                        end)
-                        
-                        RunService.RenderStepped:Wait()
-                    end
-                end
-            end)
+            local frameLength = (nextTime - currentTime) / fakeAnimSpeed
+            local startTime = tick()
             
-            task.wait(0.03)
-        end
-    end)
-end
-
-local function toggleFakeAnimation(animationId)
-    if not ghostEnabled then
-        warn("Reanimation is not enabled!")
-        return
-    end
-
-    -- Removed the check for currentPlayingAnimation == animationId
-    -- So it will always play the animation when clicked
-    
-    if currentPlayingAnimation then
-        stopFakeAnimation()
-    end
-
-    currentPlayingAnimation = animationId
-    playFakeAnimation(animationId)
-end
-
--- Animation management
-local function addNewAnimation(animName, animId)
-    -- Validate the animation ID
-    local success, animation = pcall(function()
-        return game:GetObjects("rbxassetid://" .. animId)[1]
-    end)
-    
-    if not success or not animation then
-        warn("Invalid Animation ID.")
-        return false
-    end
-    
-    -- Add to custom animations
-    table.insert(loadedAnimations.custom, {
-        Name = animName,
-        ID = animId,
-        IsR6 = false
-    })
-    
-    -- Save to file
-    saveAnimationsToFile()
-    return true
-end
-
--- GUI Creation
-local function createAnimationButton(parent, yOffset, animName, animId, isR6)
-    local button = Instance.new("TextButton", parent)
-    button.Name = animName
-    button.Size = UDim2.new(1, -20, 0, 32)
-    button.Position = UDim2.new(0, 8, 0, yOffset)
-    button.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
-    button.Text = animName
-    button.TextSize = 17
-    button.Font = Enum.Font.GothamSemibold
-    button.TextColor3 = Color3.fromRGB(244, 244, 244)
-    button.BorderSizePixel = 0
-
-    local buttonStroke = Instance.new("UIStroke", button)
-    buttonStroke.Transparency = 0.23
-    buttonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    buttonStroke.Thickness = 0.7
-    buttonStroke.Color = Color3.fromRGB(58, 58, 58)
-
-    local buttonCorner = Instance.new("UICorner", button)
-    buttonCorner.CornerRadius = UDim.new(0, 4)
-
-    if showR6Label and isR6 then
-        local r6Label = Instance.new("TextLabel", button)
-        r6Label.Size = UDim2.new(0, 50, 1, 0)
-        r6Label.Position = UDim2.new(0, -55, 0, 0)
-        r6Label.BackgroundColor3 = Color3.fromRGB(57, 190, 249)
-        r6Label.Text = "R6"
-        r6Label.TextSize = 14
-        r6Label.Font = Enum.Font.GothamBold
-        r6Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-        r6Label.BorderSizePixel = 0
-
-        local labelCorner = Instance.new("UICorner", r6Label)
-        labelCorner.CornerRadius = UDim.new(0, 4)
-    end
-
-    button.MouseEnter:Connect(function()
-        local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
-        hoverTween:Play()
-    end)
-
-    button.MouseLeave:Connect(function()
-        local leaveTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
-        leaveTween:Play()
-    end)
-
-    button.MouseButton1Click:Connect(function()
-        button.TextColor3 = Color3.fromRGB(244, 244, 244)
-
-        local clickTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(57, 190, 249)})
-        clickTween:Play()
-        clickTween.Completed:Connect(function()
-            local resetTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(244, 244, 244)})
-            resetTween:Play()
-        end)
-
-        toggleFakeAnimation(animId)
-    end)
-
-    return button
-end
-
-local function createMainGUI()
-    -- Main GUI
-    mainGUI = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
-    mainGUI.Name = "SentinelReanimation"
-    mainGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    mainGUI.ResetOnSpawn = false
-
-    local mainFrame = Instance.new("Frame", mainGUI)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.BackgroundColor3 = Color3.fromRGB(23, 23, 25)
-    mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    mainFrame.Size = UDim2.new(0, 318, 0, 460)
-    mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    mainFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    mainFrame.Name = "MainFrame"
-
-    local mainCorner = Instance.new("UICorner", mainFrame)
-    mainCorner.CornerRadius = UDim.new(0, 7)
-    -- Top Bar
-    local topBar = Instance.new("Frame", mainFrame)
-    topBar.BorderSizePixel = 0
-    topBar.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
-    topBar.Size = UDim2.new(0, 316, 0, 51)
-    topBar.Position = UDim2.new(0, 1, 0, 0)
-    topBar.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    topBar.Name = "TopBar"
-
-    local topBarCorner = Instance.new("UICorner", topBar)
-    topBarCorner.CornerRadius = UDim.new(0, 7)
-
-    -- Title Label
-    local titleLabel = Instance.new("TextLabel", topBar)
-    titleLabel.BorderSizePixel = 0
-    titleLabel.TextSize = 18
-    titleLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Size = UDim2.new(0, 200, 0, 50)
-    titleLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    titleLabel.Text = "Sentinel Reanimation"
-    titleLabel.Position = UDim2.new(0.01852, 0, 0.03846, 0)
-
-    -- Close Button
-    local closeButton = Instance.new("ImageButton", topBar)
-    closeButton.Name = "CloseButton"
-    closeButton.Size = UDim2.new(0, 24, 0, 24)
-    closeButton.Position = UDim2.new(1, -16, 0.72, -12)
-    closeButton.AnchorPoint = Vector2.new(1, 0.5)
-    closeButton.BackgroundTransparency = 1
-    closeButton.Image = "rbxassetid://10152135063"
-
-    closeButton.MouseEnter:Connect(function()
-        closeButton.Image = "rbxassetid://104301854198764"
-    end)
-
-    closeButton.MouseLeave:Connect(function()
-        closeButton.Image = "rbxassetid://10152135063"
-    end)
-
-    closeButton.MouseEnter:Connect(function()
-        local hoverTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 0, 0)})
-        hoverTween:Play()
-    end)
-
-    closeButton.MouseLeave:Connect(function()
-        local leaveTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 255, 255)})
-        leaveTween:Play()
-    end)
-
-    closeButton.MouseButton1Click:Connect(function()
-        mainGUI:Destroy()
-    end)
-
-    -- Search Bar
-    local searchFrame = Instance.new("Frame", mainFrame)
-    searchFrame.BorderSizePixel = 0
-    searchFrame.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
-    searchFrame.Size = UDim2.new(0, 294, 0, 36)
-    searchFrame.Position = UDim2.new(0, 12, 0, 66)
-    searchFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    searchFrame.Name = "Search"
-
-    local searchCorner = Instance.new("UICorner", searchFrame)
-    searchCorner.CornerRadius = UDim.new(0, 4)
-
-    local searchStroke = Instance.new("UIStroke", searchFrame)
-    searchStroke.Transparency = 0.23
-    searchStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    searchStroke.Thickness = 0.7
-    searchStroke.Color = Color3.fromRGB(58, 58, 58)
-
-    local searchBox = Instance.new("TextBox", searchFrame)
-    searchBox.CursorPosition = -1
-    searchBox.TextXAlignment = Enum.TextXAlignment.Left
-    searchBox.BorderSizePixel = 0
-    searchBox.TextSize = 15
-    searchBox.TextColor3 = Color3.fromRGB(136, 136, 136)
-    searchBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    searchBox.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
-    searchBox.Size = UDim2.new(0, 183, 0, 29)
-    searchBox.Position = UDim2.new(0.14286, 0, 0.08333, 0)
-    searchBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    searchBox.Text = "Search animations..."
-    searchBox.BackgroundTransparency = 1
-
-    local searchIcon = Instance.new("ImageLabel", searchFrame)
-    searchIcon.BorderSizePixel = 0
-    searchIcon.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    searchIcon.Image = "http://www.roblox.com/asset/?id=5107220207"
-    searchIcon.Size = UDim2.new(0, 15, 0, 15)
-    searchIcon.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    searchIcon.BackgroundTransparency = 1
-    searchIcon.Position = UDim2.new(0.04422, 0, 0.27778, 0)
-
-    local addButton = Instance.new("TextButton", searchFrame)
-    addButton.BorderSizePixel = 0
-    addButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    addButton.TextSize = 17
-    addButton.BackgroundColor3 = Color3.fromRGB(57, 190, 249)
-    addButton.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-    addButton.Size = UDim2.new(0, 62, 0, 36)
-    addButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    addButton.Text = "Add"
-    addButton.Position = UDim2.new(0.78912, 0, 0, 0)
-    
-    local addButtonCorner = Instance.new("UICorner", addButton)
-    addButtonCorner.CornerRadius = UDim.new(0, 4)
-    
-    addButton.MouseButton1Click:Connect(function()
-        addEmoteFrame.Visible = false
-    end)    
-
-    -- Animation Buttons Frame
-    local buttonsFrame = Instance.new("Frame", mainFrame)
-    buttonsFrame.BorderSizePixel = 0
-    buttonsFrame.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
-    buttonsFrame.Size = UDim2.new(0, 294, 0, 288)
-    buttonsFrame.Position = UDim2.new(0, 12, 0, 118)
-    buttonsFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    buttonsFrame.Name = "Buttons"
-
-    local buttonsCorner = Instance.new("UICorner", buttonsFrame)
-    buttonsCorner.CornerRadius = UDim.new(0, 4)
-
-    local buttonsStroke = Instance.new("UIStroke", buttonsFrame)
-    buttonsStroke.Transparency = 0.23
-    buttonsStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    buttonsStroke.Thickness = 0.7
-    buttonsStroke.Color = Color3.fromRGB(58, 58, 58)
-
-    -- Enable Button Frame
-    local enableFrame = Instance.new("Frame", mainFrame)
-    enableFrame.BorderSizePixel = 0
-    enableFrame.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
-    enableFrame.Size = UDim2.new(0, 294, 0, 36)
-    enableFrame.Position = UDim2.new(0, 12, 0, 415)
-    enableFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    enableFrame.Name = "Enable"
-
-    local enableStroke = Instance.new("UIStroke", enableFrame)
-    enableStroke.Transparency = 0.23
-    enableStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    enableStroke.Thickness = 0.7
-    enableStroke.Color = Color3.fromRGB(58, 58, 58)
-
-    local enableCorner = Instance.new("UICorner", enableFrame)
-    enableCorner.CornerRadius = UDim.new(0, 4)
-
-    local enableLabel = Instance.new("TextLabel", enableFrame)
-    enableLabel.BorderSizePixel = 0
-    enableLabel.TextSize = 14
-    enableLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    enableLabel.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-    enableLabel.TextColor3 = Color3.fromRGB(207, 207, 207)
-    enableLabel.BackgroundTransparency = 1
-    enableLabel.Size = UDim2.new(0, 200, 0, 28)
-    enableLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    enableLabel.Text = "Enable R15 Reanimation"
-    enableLabel.Position = UDim2.new(0.15986, 0, 0.11111, 0)
-
-    local enableButton = Instance.new("TextButton", enableFrame)
-    enableButton.BackgroundTransparency = 1
-    enableButton.Size = UDim2.new(1, 0, 1, 0)
-    enableButton.Text = ""
-    enableButton.Name = "EnableButton"
-
-    -- Function to add buttons to the scrolling frame
-    local function addButtonsToFrame()
-        local scrollingFrame = buttonsFrame:FindFirstChild("EmoteScrollingFrame") or Instance.new("ScrollingFrame", buttonsFrame)
-        scrollingFrame.Name = "EmoteScrollingFrame"
-        scrollingFrame.Size = UDim2.new(1, 0, 1, 0)
-        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2000)
-        scrollingFrame.ScrollBarThickness = 5
-        scrollingFrame.BackgroundTransparency = 1
-        
-        -- Clear existing buttons
-        for _, child in ipairs(scrollingFrame:GetChildren()) do
-            if child:IsA("TextButton") then
-                child:Destroy()
-            end
-        end
-
-        local yOffset = 10
-
-        local emotes = {
-            {"Back On 74 ID", "108088087568172", false},
-            {"Boogie Bomb ID", "90159280044964", false},
-            {"Billy Bounce ID", "96342044032488", false},
-            {"Boogie Down ID", "83261869707370", false},
-            {"Cupid's Arrow ID", "122288826913668", false},
-            {"California Gurls ID", "131457845572132", false},
-            {"Chase Me Down ID", "97455319886162", false},
-            {"Default Dance ID", "9836885605", false},
-            {"Dancery ID", "135978042300523", false},
-            {"Desirable ID", "80125132098992", false},
-            {"Disco Fever ID", "9836369561", false},
-            {"Evil Plan ID", "99449894581351", false},
-            {"Electro Shuffle ID", "9116910876", false},
-            {"Electro Swing ID", "7839963379", false},
-            {"FreeStylin ID", "107995227083576", false},
-            {"Fresh ID", "9116897929", false},
-            {"Groove Destroyer ID", "18147813725", false},
-            {"Griddy ID", "135342670717393", false},
-            {"Hot Marat ID", "7107202783", false},
-            {"Hakari Dance", "73789839912852", true},
-            {"Hey Now ID", "7124753337", false},
-            {"Hype ID", "121532134633896", false},
-            {"Head Banger ID", "114573617035275", false},
-            {"Infinite Dab ID", "74538409545244", false},
-            {"Jabba Switchway ID", "8229514367", false},
-            {"Jubi Slide ID", "16570530493", false},
-            {"Lucid Dreams ID", "108895351743195", false},
-            {"Look At Me ID", "129004554500202", false},
-            {"Mr Blue Sky!!! ID", "8603017969", false},
-            {"Maximum Bounce ID", "8703876822", false},
-            {"Miku Live ID", "102039871027058", false},
-            {"Miku Miku Beam ID", "116802170205791", false},
-            {"No Cure ID", "76827103391437", false},
-            {"Orange Justice ID", "11212163754", false},
-            {"Phonky Turn ID", "122815417402057", false},
-            {"Pull Up ID", "8871805743", false},
-            {"Poki ID", "83405509049719", false},
-            {"Party Hips ID", "91664350716653", false},
-            {"Reanimated ID", "7757686890", false},
-            {"Scenario ID", "8924083749", false},
-            {"Snoop's Walk ID", "95567389800091", false},
-            {"Slalom Style ID", "123624215915471", false},
-            {"Toosie Slide ID", "8230248004", false},
-            {"Take The L ID", "114109549820426", false},
-            {"The Floss ID", "9003921069", false},
-            {"Verve ID", "119993822512014", false},
-            {"The Viper ID", "109195495448084", false},
-            {"What You Want ID", "112811217802231", false},
-            {"Unlock It", "104997186005133", true},
-            {"Goofy Twerk ID", "71819565973448", false},
-            {"Sicko Mode ID", "100379545014024", true},
-            {"Stock Shuffle ID", "95645590336118", true},
-            {"Billy Bounce R6 ID", "104963686949319", true},
-            {"Embarrassing ID", "110978487197470", true},
-            {"Arona ID", "134041849348680", true},
-            {"Hakari 2 ID", "70986254530914", true},
-        }
-
-        -- Add custom animations
-        if loadedAnimations.custom then
-            for _, anim in ipairs(loadedAnimations.custom) do
-                table.insert(emotes, {anim.Name, anim.ID, anim.IsR6 or false})
-            end
-        end
-
-        table.sort(emotes, function(a, b)
-            return a[1]:lower() < b[1]:lower()
-        end)
-
-        local buttons = {}
-
-        for _, emote in ipairs(emotes) do
-            local emoteName = emote[1]
-            local emoteId = emote[2]
-            local isR6 = emote[3]
-
-            local button = createAnimationButton(scrollingFrame, yOffset, emoteName, emoteId, isR6)
-            table.insert(buttons, button)
-            yOffset = yOffset + 40
-        end
-
-        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
-
-        -- Search functionality
-        searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-            local searchText = searchBox.Text:lower()
-            yOffset = 10
-
-            for _, button in ipairs(buttons) do
-                if button.Name:lower():find(searchText) then
-                    button.Visible = true
-                    button.Position = UDim2.new(0, 8, 0, yOffset)
-                    yOffset = yOffset + 40
-                else
-                    button.Visible = false
+            while tick() - startTime < frameLength and not fakeAnimStop do
+                local alpha = (tick() - startTime) / frameLength
+                
+                pcall(function()
+                for _, currentPose in pairs(currentFrame:GetDescendants()) do
+                    local nextPose = nextFrame:FindFirstChild(currentPose.Name, true)
+                    local motor = Joints[currentPose.Name]
+                    
+                    if motor and nextPose and ghostOriginalMotorCFrames[motor] then
+                    local currentCF = ghostOriginalMotorCFrames[motor].C0 * currentPose.CFrame
+                    local nextCF = ghostOriginalMotorCFrames[motor].C0 * nextPose.CFrame
+                    motor.C0 = currentCF:Lerp(nextCF, alpha)
+                    end
                 end
+                end)
+                
+                RunService.RenderStepped:Wait()
             end
-
-            scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+            end
         end)
-    end
-
-    -- Add Emote GUI
-    local addEmoteGUI = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
-    addEmoteGUI.Name = "AddEmoteGUI"
-    addEmoteGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    addEmoteGUI.ResetOnSpawn = false
-
-    local addEmoteFrame = Instance.new("Frame", addEmoteGUI)
-    addEmoteFrame.Name = "AddEmote"
-    addEmoteFrame.BorderSizePixel = 0
-    addEmoteFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
-    addEmoteFrame.Size = UDim2.new(0, 235, 0, 138)
-    addEmoteFrame.Position = UDim2.new(0.5, -117.5, 0.5, -69)
-    addEmoteFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    addEmoteFrame.Visible = false
-
-    local UserInputService = game:GetService("UserInputService")
-    local runService = game:GetService("RunService")
-    
-    local dragging = false
-    local dragInput
-    local dragStart
-    local startPos
-    
-    local function Lerp(a, b, m)
-        return a + (b - a) * m
-    end
-    
-    local lastMousePos
-    local lastGoalPos
-    local DRAG_SPEED = 15 -- The speed of the UI drag
-    
-    local function Update(dt)
-        if not startPos then return end
-        if not dragging and lastGoalPos then
-            addEmoteFrame.Position = UDim2.new(
-                startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, lastGoalPos.X.Offset, dt * DRAG_SPEED),
-                startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, lastGoalPos.Y.Offset, dt * DRAG_SPEED)
-            )
-            return
-        end
-    
-        local delta = lastMousePos - UserInputService:GetMouseLocation()
-        local xGoal = startPos.X.Offset - delta.X
-        local yGoal = startPos.Y.Offset - delta.Y
-        lastGoalPos = UDim2.new(startPos.X.Scale, xGoal, startPos.Y.Scale, yGoal)
-        addEmoteFrame.Position = UDim2.new(
-            startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, xGoal, dt * DRAG_SPEED),
-            startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, yGoal, dt * DRAG_SPEED)
-        )
-    end
-    
-    addEmoteFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = addEmoteFrame.Position
-            lastMousePos = UserInputService:GetMouseLocation()
-    
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    addEmoteFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    
-    runService.Heartbeat:Connect(Update)
-
-    local emoteCorner = Instance.new("UICorner", addEmoteFrame)
-    emoteCorner.CornerRadius = UDim.new(0, 4)
-
-    local emoteStroke = Instance.new("UIStroke", addEmoteFrame)
-    emoteStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    emoteStroke.Thickness = 0.7
-    emoteStroke.Color = Color3.fromRGB(59, 59, 59)
-
-    -- Function to toggle Add Emote GUI
-    local function toggleAddEmoteGUI()
-        addEmoteFrame.Visible = not addEmoteFrame.Visible
-        if addEmoteFrame.Visible then
-            -- Reset fields when opening
-            animNameBox.Text = ""
-            animIdBox.Text = ""
-        end
-    end
-
-    local animNameBox = Instance.new("TextBox", addEmoteFrame)
-    animNameBox.Name = "AnimName"
-    animNameBox.CursorPosition = -1
-    animNameBox.PlaceholderColor3 = Color3.fromRGB(119, 119, 119)
-    animNameBox.BorderSizePixel = 0
-    animNameBox.TextSize = 14
-    animNameBox.TextColor3 = Color3.fromRGB(179, 179, 179)
-    animNameBox.BackgroundColor3 = Color3.fromRGB(35, 35, 39)
-    animNameBox.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
-    animNameBox.PlaceholderText = "Animation Name"
-    animNameBox.Size = UDim2.new(0, 211, 0, 30)
-    animNameBox.Position = UDim2.new(0.05106, 0, 0.08642, 0)
-    animNameBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    animNameBox.Text = ""
-
-    local nameBoxCorner = Instance.new("UICorner", animNameBox)
-    nameBoxCorner.CornerRadius = UDim.new(0, 2)
-
-    local nameBoxStroke = Instance.new("UIStroke", animNameBox)
-    nameBoxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    nameBoxStroke.Thickness = 0.7
-    nameBoxStroke.Color = Color3.fromRGB(59, 59, 59)
-
-    local animIdBox = Instance.new("TextBox", addEmoteFrame)
-    animIdBox.Name = "AnimID"
-    animIdBox.CursorPosition = -1
-    animIdBox.PlaceholderColor3 = Color3.fromRGB(119, 119, 119)
-    animIdBox.BorderSizePixel = 0
-    animIdBox.TextSize = 14
-    animIdBox.TextColor3 = Color3.fromRGB(179, 179, 179)
-    animIdBox.BackgroundColor3 = Color3.fromRGB(35, 35, 39)
-    animIdBox.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
-    animIdBox.PlaceholderText = "Animation ID"
-    animIdBox.Size = UDim2.new(0, 211, 0, 30)
-    animIdBox.Position = UDim2.new(0.05106, 0, 0.38808, 0)
-    animIdBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    animIdBox.Text = ""
-
-    local idBoxCorner = Instance.new("UICorner", animIdBox)
-    idBoxCorner.CornerRadius = UDim.new(0, 2)
-
-    local idBoxStroke = Instance.new("UIStroke", animIdBox)
-    idBoxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    idBoxStroke.Thickness = 0.7
-    idBoxStroke.Color = Color3.fromRGB(59, 59, 59)
-
-    local confirmButton = Instance.new("TextButton", addEmoteFrame)
-    confirmButton.Name = "Confirm"
-    confirmButton.BorderSizePixel = 0
-    confirmButton.TextColor3 = Color3.fromRGB(187, 187, 187)
-    confirmButton.TextSize = 15
-    confirmButton.BackgroundColor3 = Color3.fromRGB(43, 43, 48)
-    confirmButton.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
-    confirmButton.Size = UDim2.new(0, 210, 0, 29)
-    confirmButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
-    confirmButton.Text = "Confirm"
-    confirmButton.Position = UDim2.new(0.05106, 0, 0.7029, 0)
-
-    local confirmCorner = Instance.new("UICorner", confirmButton)
-    confirmCorner.CornerRadius = UDim.new(0, 4)
-
-    local confirmStroke = Instance.new("UIStroke", confirmButton)
-    confirmStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    confirmStroke.Thickness = 0.7
-    confirmStroke.Color = Color3.fromRGB(59, 59, 59)
-
-    -- Function to toggle Add Emote GUI
-    local function toggleAddEmoteGUI()
-        addEmoteFrame.Visible = not addEmoteFrame.Visible
-    end
-
-    -- Connect the Add button
-    addButton.MouseButton1Click:Connect(toggleAddEmoteGUI)
-
-    -- Confirm button handler
-    confirmButton.MouseButton1Click:Connect(function()
-        local animName = animNameBox.Text
-        local animId = animIdBox.Text
         
-        if animName == "" or animId == "" then
-            warn("Please enter both animation name and ID")
-            return
-        end
-        
-        if addNewAnimation(animName, animId) then
-            animNameBox.Text = ""
-            animIdBox.Text = ""
-            addEmoteFrame.Visible = false
-            addButtonsToFrame() -- Refresh the animation list
-        else
-            warn("Failed to add animation - invalid ID")
+        wait(0.03)
         end
     end)
-
-    -- Enable Button functionality
-    local function tweenTextColor(label, targetColor)
-        TweenService:Create(label, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextColor3 = targetColor}):Play()
     end
 
-    enableButton.MouseEnter:Connect(function()
-        tweenTextColor(enableLabel, Color3.fromRGB(57, 190, 249))
-    end)
-
-    enableButton.MouseLeave:Connect(function()
-        if enableLabel.Text:lower() == "disable r15 reanimation" then
-            tweenTextColor(enableLabel, Color3.fromRGB(171, 27, 27))
-        else
-            tweenTextColor(enableLabel, Color3.fromRGB(207, 207, 207))
-        end
-    end)
-
-    enableButton.MouseButton1Click:Connect(function()
-        ghostEnabled = not ghostEnabled
-        setGhostEnabled(ghostEnabled)
-        
-        if ghostEnabled then
-            enableLabel.Text = "Disable R15 Reanimation"
-            enableLabel.TextColor3 = Color3.fromRGB(171, 27, 27)
-        else
-            enableLabel.Text = "Enable R15 Reanimation"
-            enableLabel.TextColor3 = Color3.fromRGB(207, 207, 207)
-        end
-    end)
-
-    -- Add dragging functionality to main frame
-    local draggingMain = false
-    local dragInputMain
-    local dragStartMain
-    local startPosMain
-
-    local function LerpMain(a, b, m)
-        return a + (b - a) * m
-    end
-
-    local lastMousePosMain
-    local lastGoalPosMain
-    local DRAG_SPEED_MAIN = 15  -- You can change this speed independently
-
-    local function UpdateMain(dt)
-        if not startPosMain then return end
-        if not draggingMain and lastGoalPosMain then
-            mainFrame.Position = UDim2.new(
-                startPosMain.X.Scale, LerpMain(mainFrame.Position.X.Offset, lastGoalPosMain.X.Offset, dt * DRAG_SPEED_MAIN),
-                startPosMain.Y.Scale, LerpMain(mainFrame.Position.Y.Offset, lastGoalPosMain.Y.Offset, dt * DRAG_SPEED_MAIN)
-            )
-            return
-        end
-
-        local delta = lastMousePosMain - UserInputService:GetMouseLocation()
-        local xGoal = startPosMain.X.Offset - delta.X
-        local yGoal = startPosMain.Y.Offset - delta.Y
-        lastGoalPosMain = UDim2.new(startPosMain.X.Scale, xGoal, startPosMain.Y.Scale, yGoal)
-        mainFrame.Position = UDim2.new(
-            startPosMain.X.Scale, LerpMain(mainFrame.Position.X.Offset, xGoal, dt * DRAG_SPEED_MAIN),
-            startPosMain.Y.Scale, LerpMain(mainFrame.Position.Y.Offset, yGoal, dt * DRAG_SPEED_MAIN)
-        )
-    end
-
-    topBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingMain = true
-            dragStartMain = input.Position
-            startPosMain = mainFrame.Position
-            lastMousePosMain = UserInputService:GetMouseLocation()
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    draggingMain = false
-                end
-            end)
-        end
-    end)
-
-    topBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInputMain = input
-        end
-    end)
-
-    RunService.Heartbeat:Connect(UpdateMain)
-
-    -- Load animations and create buttons
-    loadAnimationsFromFile()
-    addButtonsToFrame()
-
-    return mainGUI
-end
-
--- Input handling
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then return end
 
@@ -1163,10 +451,87 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
         stopFakeAnimation()
         return
     end
+
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        for animName, keyCode in pairs(animationKeybinds) do
+            if input.KeyCode == keyCode then
+                local emotes = {
+                    {"Back On 74 ID", "108088087568172"},
+                    {"Boogie Bomb ID", "90159280044964"},
+                    {"Billy Bounce ID", "96342044032488"},
+                    {"Boogie Down ID", "83261869707370"},
+                    {"Cupid's Arrow ID", "122288826913668"},
+                    {"California Gurls ID", "131457845572132"},
+                    {"Chase Me Down ID", "97455319886162"},
+                    {"Default Dance ID", "9836885605"},
+                    {"Dancery ID", "135978042300523"},
+                    {"Desirable ID", "80125132098992"},
+                    {"Disco Fever ID", "9836369561"},
+                    {"Evil Plan ID", "99449894581351"},
+                    {"Electro Shuffle ID", "9116910876"},
+                    {"Electro Swing ID", "7839963379"},
+                    {"FreeStylin ID", "107995227083576"},
+                    {"Fresh ID", "9116897929"},
+                    {"Groove Destroyer ID", "18147813725"},
+                    {"Griddy ID", "135342670717393"},
+                    {"Hot Marat ID", "7107202783"},
+                    {"Hey Now ID", "7124753337"},
+                    {"Hype ID", "121532134633896"},
+                    {"Head Banger ID", "114573617035275"},
+                    {"Infinite Dab ID", "74538409545244"},
+                    {"Jabba Switchway ID", "8229514367"},
+                    {"Jubi Slide ID", "16570530493"},
+                    {"Lucid Dreams ID", "108895351743195"},
+                    {"Look At Me ID", "129004554500202"},
+                    {"Mr Blue Sky!!! ID", "8603017969"},
+                    {"Maximum Bounce ID", "8703876822"},
+                    {"Miku Live ID", "102039871027058"},
+                    {"Miku Miku Beam ID", "116802170205791"},
+                    {"No Cure ID", "76827103391437"},
+                    {"Orange Justice ID", "11212163754"},
+                    {"Phonky Turn ID", "122815417402057"},
+                    {"Pull Up ID", "8871805743"},
+                    {"Poki ID", "83405509049719"},
+                    {"Party Hips ID", "91664350716653"},
+                    {"Reanimated ID", "7757686890"},
+                    {"Scenario ID", "8924083749"},
+                    {"Snoop's Walk ID", "95567389800091"},
+                    {"Slalom Style ID", "123624215915471"},
+                    {"Toosie Slide ID", "8230248004"},
+                    {"Take The L ID", "114109549820426"},
+                    {"The Floss ID", "9003921069"},
+                    {"Verve ID", "119993822512014"},
+                    {"The Viper ID", "109195495448084"},
+                    {"What You Want ID", "112811217802231"},
+                    {"Goofy Twerk ID", "112811217802231"}
+                }
+
+                local animationId = nil
+                for _, emote in ipairs(emotes) do
+                    if (emote[1] == animName) then
+                        animationId = emote[2]
+                        break
+                    end
+                end
+
+                if animationId then
+                    if fakeAnimRunning then
+                        stopFakeAnimation()
+                    else
+                        playFakeAnimation(animationId)
+                    end
+                else
+                    warn("Animation ID not found for keybind: " .. animName)
+                end
+                return 
+            end
+        end
+    end
 end)
 
--- Character handling
-Players.LocalPlayer.CharacterAdded:Connect(function(character)
+LocalPlayer = Players.LocalPlayer
+
+LocalPlayer.CharacterAdded:Connect(function(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
     if humanoid then
         humanoid.Died:Connect(function()
@@ -1177,11 +542,535 @@ Players.LocalPlayer.CharacterAdded:Connect(function(character)
                     humanoid:TakeDamage(humanoid.MaxHealth)
                 end)
 
+                -- Turn off reanimation
                 setGhostEnabled(false)
+                local toggleButton = gui:FindFirstChild("ToggleButton", true)
+                if (toggleButton) then
+                    toggleButton.Text = "Enable Reanimation"
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+                end
             end
         end)
     end
 end)
 
--- Initialize
-createMainGUI()
+LocalPlayer.CharacterAdded:Connect(function(character)
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if humanoid then
+        humanoid.Died:Connect(function()
+            if ghostEnabled then
+                setGhostEnabled(false)
+                local toggleButton = gui:FindFirstChild("ToggleButton", true)
+                if toggleButton then
+                    toggleButton.Text = "Enable Reanimation"
+                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
+                end
+            end
+        end)
+    end
+end)
+
+local function C_e()
+    local player = Players.LocalPlayer
+
+    local emoteFrame = player:WaitForChild("PlayerGui"):WaitForChild("EmoteGui"):WaitForChild("EmoteFrame")
+    local scrollingFrame = emoteFrame:WaitForChild("ScrollingFrame")
+    local emoteButton1 = scrollingFrame:WaitForChild("Emote1")
+    local emoteButton2 = scrollingFrame:WaitForChild("Emote2")
+    local emoteButton3 = scrollingFrame:WaitForChild("Emote3")
+
+    local function playReanimation(animationId)
+        if ghostEnabled then
+            playFakeAnimation(animationId)
+        else
+            warn("Reanimation is not enabled!")
+        end
+    end
+
+    emoteButton1.MouseButton1Click:Connect(function()
+        playReanimation(animationId1)
+    end)
+
+    emoteButton2.MouseButton1Click:Connect(function()
+        playReanimation(animationId2)
+    end)
+
+    emoteButton3.MouseButton1Click:Connect(function()
+        playReanimation(animationId3)
+    end)
+end
+
+task.spawn(C_e)
+
+local G2L = {};
+
+G2L["1"] = Instance.new("ScreenGui", game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"))
+G2L["1"]["ZIndexBehavior"] = Enum.ZIndexBehavior.Sibling
+G2L["1"].ResetOnSpawn = false
+
+G2L["2"] = Instance.new("Frame", G2L["1"]);
+G2L["2"]["BorderSizePixel"] = 0;
+G2L["2"]["BackgroundColor3"] = Color3.fromRGB(23, 23, 25);
+G2L["2"]["AnchorPoint"] = Vector2.new(0.5, 0.5);
+G2L["2"]["Size"] = UDim2.new(0, 318, 0, 460);
+G2L["2"]["Position"] = UDim2.new(0, 667, 0, 447);
+G2L["2"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["2"]["Name"] = [[MainFrame]];
+
+G2L["3"] = Instance.new("UICorner", G2L["2"]);
+G2L["3"]["CornerRadius"] = UDim.new(0, 7);
+
+G2L["4"] = Instance.new("Frame", G2L["2"]);
+G2L["4"]["BorderSizePixel"] = 0;
+G2L["4"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35);
+G2L["4"]["Size"] = UDim2.new(0, 316, 0, 51);
+G2L["4"]["Position"] = UDim2.new(0, 1, 0, 0);
+G2L["4"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["4"]["Name"] = [[TopBar]];
+
+G2L["5"] = Instance.new("UICorner", G2L["4"]);
+G2L["5"]["CornerRadius"] = UDim.new(0, 7);
+
+G2L["6"] = Instance.new("TextLabel", G2L["4"]);
+G2L["6"]["BorderSizePixel"] = 0;
+G2L["6"]["TextSize"] = 18;
+G2L["6"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["6"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.Bold, Enum.FontStyle.Normal);
+G2L["6"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["6"]["BackgroundTransparency"] = 1;
+G2L["6"]["Size"] = UDim2.new(0, 200, 0, 50);
+G2L["6"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["6"]["Text"] = [[Sentinel Reanimation]];
+G2L["6"]["Position"] = UDim2.new(0.01852, 0, 0.03846, 0);
+
+local closeButton = Instance.new("ImageButton", G2L["4"])
+closeButton.Name = "CloseButton"
+closeButton.Size = UDim2.new(0, 24, 0, 24)
+closeButton.Position = UDim2.new(1, -16, 0.72, -12)
+closeButton.AnchorPoint = Vector2.new(1, 0.5)
+closeButton.BackgroundTransparency = 1
+closeButton.Image = "rbxassetid://10152135063"
+
+closeButton.MouseEnter:Connect(function()
+    closeButton.Image = "rbxassetid://104301854198764"
+end)
+
+closeButton.MouseLeave:Connect(function()
+    closeButton.Image = "rbxassetid://10152135063"
+end)
+
+closeButton.MouseEnter:Connect(function()
+    local hoverTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 0, 0)})
+    hoverTween:Play()
+end)
+
+closeButton.MouseLeave:Connect(function()
+    local leaveTween = TweenService:Create(closeButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 255, 255)})
+    leaveTween:Play()
+end)
+
+closeButton.MouseButton1Click:Connect(function()
+    G2L["1"]:Destroy()
+end)
+
+G2L["7"] = Instance.new("Frame", G2L["2"]);
+G2L["7"]["BorderSizePixel"] = 0;
+G2L["7"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35);
+G2L["7"]["Size"] = UDim2.new(0, 294, 0, 36);
+G2L["7"]["Position"] = UDim2.new(0, 12, 0, 66);
+G2L["7"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["7"]["Name"] = [[Search]];
+
+G2L["8"] = Instance.new("UICorner", G2L["7"]);
+G2L["8"]["CornerRadius"] = UDim.new(0, 4);
+
+G2L["9"] = Instance.new("UIStroke", G2L["7"]);
+G2L["9"]["Transparency"] = 0.23;
+G2L["9"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["9"]["Thickness"] = 0.7;
+G2L["9"]["Color"] = Color3.fromRGB(58, 58, 58);
+
+G2L["a"] = Instance.new("TextBox", G2L["7"]);
+G2L["a"]["CursorPosition"] = -1;
+G2L["a"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+G2L["a"]["BorderSizePixel"] = 0;
+G2L["a"]["TextSize"] = 15;
+G2L["a"]["TextColor3"] = Color3.fromRGB(136, 136, 136);
+G2L["a"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["a"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.Medium, Enum.FontStyle.Normal);
+G2L["a"]["Size"] = UDim2.new(0, 183, 0, 29);
+G2L["a"]["Position"] = UDim2.new(0.14286, 0, 0.08333, 0);
+G2L["a"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["a"]["Text"] = [[Search animations...]];
+G2L["a"]["BackgroundTransparency"] = 1;
+
+G2L["b"] = Instance.new("ImageLabel", G2L["7"]);
+G2L["b"]["BorderSizePixel"] = 0;
+G2L["b"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["b"]["Image"] = [[http://www.roblox.com/asset/?id=5107220207]];
+G2L["b"]["Size"] = UDim2.new(0, 15, 0, 15);
+G2L["b"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["b"]["BackgroundTransparency"] = 1;
+G2L["b"]["Position"] = UDim2.new(0.04422, 0, 0.27778, 0);
+
+G2L["c"] = Instance.new("TextButton", G2L["7"]);
+G2L["c"]["BorderSizePixel"] = 0;
+G2L["c"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["c"]["TextSize"] = 17;
+G2L["c"]["BackgroundColor3"] = Color3.fromRGB(57, 190, 249);
+G2L["c"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+G2L["c"]["Size"] = UDim2.new(0, 62, 0, 36);
+G2L["c"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["c"]["Text"] = [[Add]];
+G2L["c"]["Position"] = UDim2.new(0.78912, 0, 0, 0);
+
+G2L["d"] = Instance.new("UICorner", G2L["c"]);
+G2L["d"]["CornerRadius"] = UDim.new(0, 4);
+
+G2L["e"] = Instance.new("Frame", G2L["2"]);
+G2L["e"]["BorderSizePixel"] = 0;
+G2L["e"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35);
+G2L["e"]["Size"] = UDim2.new(0, 294, 0, 288);
+G2L["e"]["Position"] = UDim2.new(0, 12, 0, 118);
+G2L["e"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["e"]["Name"] = [[Buttons]];
+
+G2L["f"] = Instance.new("UICorner", G2L["e"]);
+G2L["f"]["CornerRadius"] = UDim.new(0, 4);
+
+G2L["10"] = Instance.new("UIStroke", G2L["e"]);
+G2L["10"]["Transparency"] = 0.23;
+G2L["10"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["10"]["Thickness"] = 0.7;
+G2L["10"]["Color"] = Color3.fromRGB(58, 58, 58);
+
+G2L["18"] = Instance.new("Frame", G2L["2"]);
+G2L["18"]["BorderSizePixel"] = 0;
+G2L["18"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35);
+G2L["18"]["Size"] = UDim2.new(0, 294, 0, 36);
+G2L["18"]["Position"] = UDim2.new(0, 12, 0, 415);
+G2L["18"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["18"]["Name"] = [[Enable]];
+
+G2L["19"] = Instance.new("UIStroke", G2L["18"]);
+G2L["19"]["Transparency"] = 0.23;
+G2L["19"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["19"]["Thickness"] = 0.7;
+G2L["19"]["Color"] = Color3.fromRGB(58, 58, 58);
+
+G2L["1a"] = Instance.new("UICorner", G2L["18"]);
+G2L["1a"]["CornerRadius"] = UDim.new(0, 4);
+
+G2L["1b"] = Instance.new("TextLabel", G2L["18"]);
+G2L["1b"]["BorderSizePixel"] = 0;
+G2L["1b"]["TextSize"] = 14;
+G2L["1b"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["1b"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+G2L["1b"]["TextColor3"] = Color3.fromRGB(207, 207, 207);
+G2L["1b"]["BackgroundTransparency"] = 1;
+G2L["1b"]["Size"] = UDim2.new(0, 200, 0, 28);
+G2L["1b"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["1b"]["Text"] = [[Enable R15 Reanimation]];
+G2L["1b"]["Position"] = UDim2.new(0.15986, 0, 0.11111, 0);
+
+G2L["1c"] = Instance.new("TextButton", G2L["18"]);
+G2L["1c"]["BackgroundTransparency"] = 1;
+G2L["1c"]["Size"] = UDim2.new(1, 0, 1, 0);
+G2L["1c"]["Text"] = "";
+G2L["1c"]["Name"] = [[EnableButton]];
+
+local TweenService = game:GetService("TweenService")
+
+local hoverColor = Color3.fromRGB(57, 190, 249)
+local normalColor = Color3.fromRGB(207, 207, 207)
+local maroonColor = Color3.fromRGB(171, 27, 27)
+
+local tweenInfo = TweenInfo.new(
+    0.25,
+    Enum.EasingStyle.Quad,
+    Enum.EasingDirection.Out
+)
+
+local function tweenTextColor(label, targetColor)
+    TweenService:Create(label, tweenInfo, {TextColor3 = targetColor}):Play()
+end
+
+G2L["1c"].MouseEnter:Connect(function()
+    tweenTextColor(G2L["1b"], hoverColor)
+end)
+
+G2L["1c"].MouseLeave:Connect(function()
+    local textLabel = G2L["1b"]
+    if textLabel.Text:lower() == "disable r15 reanimation" then
+        tweenTextColor(textLabel, maroonColor)
+    else
+        tweenTextColor(textLabel, normalColor)
+    end
+end)
+
+G2L["1c"].MouseEnter:Connect(function()
+    local textLabel = G2L["1b"]
+    if textLabel.Text:lower() == "enable r15 reanimation" then
+        tweenTextColor(textLabel, hoverColor)
+    else
+        tweenTextColor(textLabel, hoverColor)
+    end
+end)
+
+if G2L["1b"].Text:lower() == "disable r15 reanimation" then
+    G2L["1b"].TextColor3 = Color3.fromRGB(171, 27, 27)
+end
+
+G2L["1c"].MouseButton1Click:Connect(function()
+    if ghostEnabled then
+        setGhostEnabled(false)
+        G2L["1b"].Text = "Enable R15 Reanimation"
+        G2L["1b"].TextColor3 = Color3.fromRGB(207, 207, 207)
+    else
+        setGhostEnabled(true)
+        G2L["1b"].Text = "Disable R15 Reanimation"
+        G2L["1b"].TextColor3 = Color3.fromRGB(171, 27, 27)
+    end
+end)
+
+local loadedAnimations = {}
+local currentPlayingAnimation = nil
+
+local function toggleFakeAnimation(animationId)
+    if not ghostEnabled then
+        warn("Reanimation is not enabled!")
+        return
+    end
+
+    if currentPlayingAnimation == animationId then
+        stopFakeAnimation()
+        currentPlayingAnimation = nil
+        return
+    end
+
+    if currentPlayingAnimation then
+        stopFakeAnimation()
+    end
+
+    if not loadedAnimations[animationId] then
+        local success, animation = pcall(function()
+            return game:GetObjects("rbxassetid://" .. animationId)[1]
+        end)
+        if success and animation then
+            loadedAnimations[animationId] = animation
+        else
+            warn("Failed to load animation with ID: " .. animationId)
+            return
+        end
+    end
+
+    currentPlayingAnimation = animationId
+    playFakeAnimation(animationId)
+end
+
+local showR6Label = true -- Configurable variable to enable or disable R6 labels
+
+local function addButtonsToFrame()
+    local parent = G2L["e"]
+    local scrollingFrame = Instance.new("ScrollingFrame", parent)
+    scrollingFrame.Name = "EmoteScrollingFrame"
+    scrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2000)
+    scrollingFrame.ScrollBarThickness = 5
+    scrollingFrame.BackgroundTransparency = 1
+
+    local yOffset = 10
+
+    local emotes = {
+        {"Back On 74 ID", "108088087568172", false},
+        {"Boogie Bomb ID", "90159280044964", false},
+        {"Billy Bounce ID", "96342044032488", false},
+        {"Boogie Down ID", "83261869707370", false},
+        {"Cupid's Arrow ID", "122288826913668", false},
+        {"California Gurls ID", "131457845572132", false},
+        {"Chase Me Down ID", "97455319886162", false},
+        {"Default Dance ID", "9836885605", false},
+        {"Dancery ID", "135978042300523", false},
+        {"Desirable ID", "80125132098992", false},
+        {"Disco Fever ID", "9836369561", false},
+        {"Evil Plan ID", "99449894581351", false},
+        {"Electro Shuffle ID", "9116910876", false},
+        {"Electro Swing ID", "7839963379", false},
+        {"FreeStylin ID", "107995227083576", false},
+        {"Fresh ID", "9116897929", false},
+        {"Groove Destroyer ID", "18147813725", false},
+        {"Griddy ID", "135342670717393", false},
+        {"Hot Marat ID", "7107202783", false},
+        {"Hakari Dance", "73789839912852", true},
+        {"Hey Now ID", "7124753337", false},
+        {"Hype ID", "121532134633896", false},
+        {"Head Banger ID", "114573617035275", false},
+        {"Infinite Dab ID", "74538409545244", false},
+        {"Jabba Switchway ID", "8229514367", false},
+        {"Jubi Slide ID", "16570530493", false},
+        {"Lucid Dreams ID", "108895351743195", false},
+        {"Look At Me ID", "129004554500202", false},
+        {"Mr Blue Sky!!! ID", "8603017969", false},
+        {"Maximum Bounce ID", "8703876822", false},
+        {"Miku Live ID", "102039871027058", false},
+        {"Miku Miku Beam ID", "116802170205791", false},
+        {"No Cure ID", "76827103391437", false},
+        {"Orange Justice ID", "11212163754", false},
+        {"Phonky Turn ID", "122815417402057", false},
+        {"Pull Up ID", "8871805743", false},
+        {"Poki ID", "83405509049719", false},
+        {"Party Hips ID", "91664350716653", false},
+        {"Reanimated ID", "7757686890", false},
+        {"Scenario ID", "8924083749", false},
+        {"Snoop's Walk ID", "95567389800091", false},
+        {"Slalom Style ID", "123624215915471", false},
+        {"Toosie Slide ID", "8230248004", false},
+        {"Take The L ID", "114109549820426", false},
+        {"The Floss ID", "9003921069", false},
+        {"Verve ID", "119993822512014", false},
+        {"The Viper ID", "109195495448084", false},
+        {"What You Want ID", "112811217802231", false},
+        {"Unlock It", "104997186005133", true},
+        {"Goofy Twerk ID", "71819565973448", false},
+        {"Sicko Mode ID", "100379545014024", true},
+        {"Stock Shuffle ID", "95645590336118", true},
+        {"Billy Bounce R6 ID", "104963686949319", true},
+        {"Embarrassing ID", "110978487197470", true},
+        {"Arona ID", "134041849348680", true},
+    }
+
+    table.sort(emotes, function(a, b)
+        return a[1]:lower() < b[1]:lower()
+    end)
+
+    local buttons = {}
+
+    for _, emote in ipairs(emotes) do
+        local emoteName = emote[1]
+        local emoteId = emote[2]
+        local isR6 = emote[3]
+
+        local button = Instance.new("TextButton", scrollingFrame)
+        button.Name = emoteName
+        button.Size = UDim2.new(1, -20, 0, 32)
+        button.Position = UDim2.new(0, 8, 0, yOffset)
+        button.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
+        button.Text = emoteName
+        button.TextSize = 17
+        button.Font = Enum.Font.GothamSemibold
+        button.TextColor3 = Color3.fromRGB(244, 244, 244)
+        button.BorderSizePixel = 0
+
+        local buttonStroke = Instance.new("UIStroke", button)
+        buttonStroke.Transparency = 0.23
+        buttonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        buttonStroke.Thickness = 0.7
+        buttonStroke.Color = Color3.fromRGB(58, 58, 58)
+    
+        local buttonCorner = Instance.new("UICorner", button)
+        buttonCorner.CornerRadius = UDim.new(0, 4)
+
+        if showR6Label and isR6 then
+            local r6Label = Instance.new("TextLabel", button)
+            r6Label.Size = UDim2.new(0, 50, 1, 0)
+            r6Label.Position = UDim2.new(0, -55, 0, 0)
+            r6Label.BackgroundColor3 = Color3.fromRGB(57, 190, 249)
+            r6Label.Text = "R6"
+            r6Label.TextSize = 14
+            r6Label.Font = Enum.Font.GothamBold
+            r6Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            r6Label.BorderSizePixel = 0
+
+            local labelCorner = Instance.new("UICorner", r6Label)
+            labelCorner.CornerRadius = UDim.new(0, 4)
+        end
+
+        button.MouseEnter:Connect(function()
+            local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
+            hoverTween:Play()
+        end)
+
+        button.MouseLeave:Connect(function()
+            local leaveTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
+            leaveTween:Play()
+        end)
+
+        button.MouseButton1Click:Connect(function()
+            button.TextColor3 = Color3.fromRGB(244, 244, 244)
+
+            local clickTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(57, 190, 249)})
+            clickTween:Play()
+            clickTween.Completed:Connect(function()
+                local resetTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(244, 244, 244)})
+                resetTween:Play()
+            end)
+
+            toggleFakeAnimation(emoteId)
+        end)
+
+        table.insert(buttons, button)
+        yOffset = yOffset + 40
+    end
+
+    local searchBox = G2L["a"]
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local searchText = searchBox.Text:lower()
+        yOffset = 10
+
+        for _, button in ipairs(buttons) do
+            if button.Name:lower():find(searchText) then
+                button.Visible = true
+                button.Position = UDim2.new(0, 8, 0, yOffset)
+                yOffset = yOffset + 40
+            else
+                button.Visible = false
+            end
+        end
+
+        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+    end)
+end
+
+addButtonsToFrame()
+
+local UIS = game:GetService("UserInputService")
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    G2L["2"].Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+G2L["2"].InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = G2L["2"].Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+G2L["2"].InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+return G2L["1"], require;
