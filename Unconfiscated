@@ -1,11 +1,11 @@
-Players = game:GetService("Players")
-Workspace = game:GetService("Workspace")
-UserInputService = game:GetService("UserInputService")
-RunService = game:GetService("RunService")
-ReplicatedStorage = game:GetService("ReplicatedStorage")
-TweenService = game:GetService("TweenService")
-LocalPlayer = Players.LocalPlayer
-HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
 
 local ghostEnabled = false
 local originalCharacter
@@ -670,6 +670,12 @@ closeButton.MouseLeave:Connect(function()
 end)
 
 closeButton.MouseButton1Click:Connect(function()
+    -- Disable reanimation if it's enabled
+    if ghostEnabled then
+        setGhostEnabled(false)
+        G2L["1b"].Text = "Enable R15 Reanimation"
+        G2L["1b"].TextColor3 = Color3.fromRGB(207, 207, 207)
+    end
     G2L["1"]:Destroy()
 end)
 
@@ -1079,6 +1085,14 @@ end)
 UIS.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         update(input)
+    end
+end)
+
+-- Handle GUI destruction
+G2L["1"].Destroying:Connect(function()
+    -- Disable reanimation if it's enabled
+    if ghostEnabled then
+        setGhostEnabled(false)
     end
 end)
 
