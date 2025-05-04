@@ -942,6 +942,7 @@ local function addButtonsToFrame()
         {"Self Head", "93659508999288", false},
         {"Butt Fuck", "97970042209398", false},
         {"2 Armed Stroke", "98873055560654", false},
+        {"Hakari 2", "70986254530914", true},
     }
 
     table.sort(emotes, function(a, b)
