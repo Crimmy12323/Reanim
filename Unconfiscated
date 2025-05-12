@@ -950,8 +950,8 @@ local function addButtonsToFrame()
         {"2 Armed Stroke", "98873055560654", false},
         {"Hakari 2", "70986254530914", true},
         {"Cum Shot", "139791836037885", false},
-        {"Sexy Attacker", "134398451061796", true},
-        {"Sexy Victim", "135096943364335", true}
+        {"Monster Mash", "133556505496748", true},
+        {"Slay Jump", "127922356397397", true}
     }
 
     table.sort(emotes, function(a, b)
