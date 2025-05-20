@@ -314,7 +314,7 @@ local function stopFakeAnimation()
 end
 local fakeAnimRunning = false
 fakeAnimStop = false
-local fakeAnimSpeed = 1.1
+local fakeAnimSpeed = 1
 local function playFakeAnimation(animationId)
     if not ghostClone then
         warn("No fake character available!")
@@ -612,7 +612,7 @@ G2L["2"] = Instance.new("Frame", G2L["1"]);
 G2L["2"]["BorderSizePixel"] = 0;
 G2L["2"]["BackgroundColor3"] = Color3.fromRGB(23, 23, 25);
 G2L["2"]["AnchorPoint"] = Vector2.new(0.5, 0.5);
-G2L["2"]["Size"] = UDim2.new(0, 318, 0, 460);
+G2L["2"]["Size"] = UDim2.new(0, 318, 0, 470);
 G2L["2"]["Position"] = UDim2.new(0, 667, 0, 447);
 G2L["2"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["2"]["Name"] = [[MainFrame]];
@@ -707,6 +707,8 @@ G2L["a"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.Me
 G2L["a"]["Size"] = UDim2.new(0, 183, 0, 29);
 G2L["a"]["Position"] = UDim2.new(0.14286, 0, 0.08333, 0);
 G2L["a"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["a"].PlaceholderText = "Search animations..."
+G2L["a"].PlaceholderColor3 = Color3.fromRGB(136, 136, 136)
 G2L["a"]["Text"] = [[Search animations...]];
 G2L["a"]["BackgroundTransparency"] = 1;
 
@@ -750,11 +752,155 @@ G2L["10"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
 G2L["10"]["Thickness"] = 0.7;
 G2L["10"]["Color"] = Color3.fromRGB(58, 58, 58);
 
+-- Speed Slider Frame
+G2L["speed_frame"] = Instance.new("Frame", G2L["2"])
+G2L["speed_frame"]["BorderSizePixel"] = 0
+G2L["speed_frame"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35)
+G2L["speed_frame"]["Size"] = UDim2.new(0, 294, 0, 36)
+G2L["speed_frame"]["Position"] = UDim2.new(0, 12, 0, 380)
+G2L["speed_frame"]["BorderColor3"] = Color3.fromRGB(0, 0, 0)
+G2L["speed_frame"]["Name"] = "SpeedSlider"
+
+G2L["speed_stroke"] = Instance.new("UIStroke", G2L["speed_frame"])
+G2L["speed_stroke"]["Transparency"] = 0.23
+G2L["speed_stroke"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border
+G2L["speed_stroke"]["Thickness"] = 0.7
+G2L["speed_stroke"]["Color"] = Color3.fromRGB(58, 58, 58)
+
+G2L["speed_corner"] = Instance.new("UICorner", G2L["speed_frame"])
+G2L["speed_corner"]["CornerRadius"] = UDim.new(0, 4)
+
+-- Speed Label
+G2L["speed_label"] = Instance.new("TextLabel", G2L["speed_frame"])
+G2L["speed_label"]["BorderSizePixel"] = 0
+G2L["speed_label"]["TextSize"] = 14
+G2L["speed_label"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255)
+G2L["speed_label"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+G2L["speed_label"]["TextColor3"] = Color3.fromRGB(207, 207, 207)
+G2L["speed_label"]["BackgroundTransparency"] = 1
+G2L["speed_label"]["Size"] = UDim2.new(0, 100, 0, 28)
+G2L["speed_label"]["BorderColor3"] = Color3.fromRGB(0, 0, 0)
+G2L["speed_label"]["Text"] = "Animation Speed:"
+G2L["speed_label"]["Position"] = UDim2.new(0.07, 0, -0.05, 0)
+
+-- Speed Value Label
+G2L["speed_value"] = Instance.new("TextLabel", G2L["speed_frame"])
+G2L["speed_value"]["BorderSizePixel"] = 0
+G2L["speed_value"]["TextSize"] = 14
+G2L["speed_value"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255)
+G2L["speed_value"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+G2L["speed_value"]["TextColor3"] = Color3.fromRGB(57, 190, 249)
+G2L["speed_value"]["BackgroundTransparency"] = 1
+G2L["speed_value"]["Size"] = UDim2.new(0, 50, 0, 28)
+G2L["speed_value"]["BorderColor3"] = Color3.fromRGB(0, 0, 0)
+G2L["speed_value"]["Text"] = "1.1x"
+G2L["speed_value"]["Position"] = UDim2.new(0.8, 0, 0.1, 0)
+
+-- Speed Slider
+G2L["speed_slider"] = Instance.new("Frame", G2L["speed_frame"])
+G2L["speed_slider"]["BorderSizePixel"] = 0
+G2L["speed_slider"]["BackgroundColor3"] = Color3.fromRGB(50, 50, 50)
+G2L["speed_slider"]["Size"] = UDim2.new(0, 180, 0, 5)
+G2L["speed_slider"]["Position"] = UDim2.new(0.05, 0, 0.7, 0)
+G2L["speed_slider"]["Name"] = "SliderTrack"
+
+G2L["speed_slider_corner"] = Instance.new("UICorner", G2L["speed_slider"])
+G2L["speed_slider_corner"]["CornerRadius"] = UDim.new(1, 0)
+
+G2L["speed_slider_fill"] = Instance.new("Frame", G2L["speed_slider"])
+G2L["speed_slider_fill"]["BorderSizePixel"] = 0
+G2L["speed_slider_fill"]["BackgroundColor3"] = Color3.fromRGB(57, 190, 249)
+G2L["speed_slider_fill"]["Size"] = UDim2.new(0.5, 0, 1, 0)
+G2L["speed_slider_fill"]["Name"] = "SliderFill"
+
+G2L["speed_slider_fill_corner"] = Instance.new("UICorner", G2L["speed_slider_fill"])
+G2L["speed_slider_fill_corner"]["CornerRadius"] = UDim.new(1, 0)
+
+G2L["speed_slider_thumb"] = Instance.new("Frame", G2L["speed_slider"])
+G2L["speed_slider_thumb"]["BorderSizePixel"] = 0
+G2L["speed_slider_thumb"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255)
+G2L["speed_slider_thumb"]["Size"] = UDim2.new(0, 15, 0, 15)
+G2L["speed_slider_thumb"]["Position"] = UDim2.new(0.5, -7, 0, -5)
+G2L["speed_slider_thumb"]["Name"] = "SliderThumb"
+
+G2L["speed_slider_thumb_corner"] = Instance.new("UICorner", G2L["speed_slider_thumb"])
+G2L["speed_slider_thumb_corner"]["CornerRadius"] = UDim.new(1, 0)
+
+-- Slider functionality
+local slider = G2L["speed_slider"]
+local fill = G2L["speed_slider_fill"]
+local thumb = G2L["speed_slider_thumb"]
+local valueLabel = G2L["speed_value"]
+
+local minValue = 0.1
+local maxValue = 3.0
+local currentValue = 1.1
+
+local function updateSlider(value)
+    local normalized = (value - minValue) / (maxValue - minValue)
+    fill.Size = UDim2.new(normalized, 0, 1, 0)
+    thumb.Position = UDim2.new(normalized, -7, 0, -5)
+    valueLabel.Text = string.format("%.1fx", value)
+    fakeAnimSpeed = value
+end
+
+local function setValueFromXPosition(x)
+    local relativeX = math.clamp(x - slider.AbsolutePosition.X, 0, slider.AbsoluteSize.X)
+    local normalized = relativeX / slider.AbsoluteSize.X
+    currentValue = minValue + (maxValue - minValue) * normalized
+    updateSlider(currentValue)
+end
+
+-- New variable to track if we're dragging the slider
+local uis = game:GetService("UserInputService")
+local isDraggingSlider = false
+
+-- helper to track mouse movement while dragging
+local function onInputChanged(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and isDraggingSlider then
+        setValueFromXPosition(input.Position.X)
+    end
+end
+
+-- start dragging on thumb
+thumb.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDraggingSlider = true
+    end
+end)
+
+-- also allow clicking the track to jump immediately
+slider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDraggingSlider = true
+        setValueFromXPosition(input.Position.X)
+    end
+end)
+
+-- stop dragging on mouse release
+thumb.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDraggingSlider = false
+    end
+end)
+slider.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDraggingSlider = false
+    end
+end)
+
+-- update on movement
+thumb.InputChanged:Connect(onInputChanged)
+uis.InputChanged:Connect(onInputChanged)
+
+-- initialize
+updateSlider(currentValue)
+
 G2L["18"] = Instance.new("Frame", G2L["2"]);
 G2L["18"]["BorderSizePixel"] = 0;
 G2L["18"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35);
 G2L["18"]["Size"] = UDim2.new(0, 294, 0, 36);
-G2L["18"]["Position"] = UDim2.new(0, 12, 0, 415);
+G2L["18"]["Position"] = UDim2.new(0, 12, 0, 425);
 G2L["18"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
 G2L["18"]["Name"] = [[Enable]];
 
@@ -784,8 +930,6 @@ G2L["1c"]["BackgroundTransparency"] = 1;
 G2L["1c"]["Size"] = UDim2.new(1, 0, 1, 0);
 G2L["1c"]["Text"] = "";
 G2L["1c"]["Name"] = [[EnableButton]];
-
-local TweenService = game:GetService("TweenService")
 
 local hoverColor = Color3.fromRGB(57, 190, 249)
 local normalColor = Color3.fromRGB(207, 207, 207)
@@ -880,8 +1024,8 @@ local function addButtonsToFrame()
     local parent = G2L["e"]
     local scrollingFrame = Instance.new("ScrollingFrame", parent)
     scrollingFrame.Name = "EmoteScrollingFrame"
-    scrollingFrame.Size = UDim2.new(1, 0, 1, 0)
-    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2000)
+    scrollingFrame.Size = UDim2.new(1, 0, 0.87, 0)
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2010)
     scrollingFrame.ScrollBarThickness = 5
     scrollingFrame.BackgroundTransparency = 1
 
@@ -1055,6 +1199,7 @@ local dragging = false
 local dragInput, dragStart, startPos
 
 local function update(input)
+    if isDraggingSlider then return end -- Don't move frame if dragging slider
     local delta = input.Position - dragStart
     G2L["2"].Position = UDim2.new(
         startPos.X.Scale,
@@ -1085,7 +1230,7 @@ G2L["2"].InputChanged:Connect(function(input)
 end)
 
 UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
+    if input == dragInput and dragging and not isDraggingSlider then -- Added check for isDraggingSlider
         update(input)
     end
 end)
