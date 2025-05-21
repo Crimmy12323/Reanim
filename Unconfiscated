@@ -1,3 +1,4 @@
+-- Credits to Federal for the ui design
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
@@ -265,7 +266,7 @@ end
 local fakeAnimStop
 local fakeAnimRunning = false
 fakeAnimStop = false
-local fakeAnimSpeed = 1
+local fakeAnimSpeed = 1.1
 local function stopFakeAnimation()
     fakeAnimStop = true
     fakeAnimRunning = false
@@ -301,7 +302,7 @@ local function playFakeAnimation(animationId)
     if fakeAnimRunning then
         stopFakeAnimation()
     end
-    wait(0.1)
+    task.wait(0.1)
     cloneSize = 1
     cloneWidth = 1
     updateCloneScale()
@@ -365,7 +366,7 @@ local function playFakeAnimation(animationId)
     part.Transparency = 1
     part.Parent = workspace
     game.Players.LocalPlayer.Character.Humanoid.PlatformStand = true
-    wait(0.1)
+    task.wait(0.1)
     for i,script in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
         if script:IsA("LocalScript") and script.Enabled then
             script.Enabled=false
@@ -417,7 +418,7 @@ local function playFakeAnimation(animationId)
             end
         end)
         
-        wait(0.03)
+        task.wait(0.03)
         end
     end)
 end
@@ -732,8 +733,8 @@ G2L["10"]["Color"] = Color3.fromRGB(58, 58, 58);
 G2L["speed_frame"] = Instance.new("Frame", G2L["2"])
 G2L["speed_frame"]["BorderSizePixel"] = 0
 G2L["speed_frame"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35)
-G2L["speed_frame"]["Size"] = UDim2.new(0, 294, 0, 36)
-G2L["speed_frame"]["Position"] = UDim2.new(0, 12, 0, 380)
+G2L["speed_frame"]["Size"] = UDim2.new(0, 294, 0, 40)
+G2L["speed_frame"]["Position"] = UDim2.new(0, 12, 0, 375)
 G2L["speed_frame"]["BorderColor3"] = Color3.fromRGB(0, 0, 0)
 G2L["speed_frame"]["Name"] = "SpeedSlider"
 
@@ -768,7 +769,7 @@ G2L["speed_value"]["BackgroundTransparency"] = 1
 G2L["speed_value"]["Size"] = UDim2.new(0, 50, 0, 28)
 G2L["speed_value"]["BorderColor3"] = Color3.fromRGB(0, 0, 0)
 G2L["speed_value"]["Text"] = "1.1x"
-G2L["speed_value"]["Position"] = UDim2.new(0.8, 0, 0.1, 0)
+G2L["speed_value"]["Position"] = UDim2.new(0.8, 0, 0.15, 0)
 
 G2L["speed_slider"] = Instance.new("Frame", G2L["speed_frame"])
 G2L["speed_slider"]["BorderSizePixel"] = 0
@@ -1020,7 +1021,7 @@ local function addButtonsToFrame()
         {"Hey Now", "7124753337", false},
         {"Hype", "121532134633896", false},
         {"Head Banger", "114573617035275", false},
-        {"Infinite Dab", "74538409545244", false},
+        {"Infinite Dab", "74538409545244"},
         {"Jabba Switchway", "8229514367", false},
         {"Jubi Slide", "16570530493", false},
         {"Lucid Dream", "108895351743195", false},
@@ -1055,13 +1056,19 @@ local function addButtonsToFrame()
         {"Goofy Ahh Hump", "116682294641877", false},
         {"Omni Man Pose", "83598910354775", false},
         {"Self Head", "93659508999288", false},
-        {"Butt Fuck", "97970042209398", false},
+        {"Get Butt Fucked", "97970042209398", false},
         {"2 Armed Stroke", "98873055560654", false},
         {"Hakari 2", "70986254530914", true},
         {"Cum Shot", "139791836037885", false},
         {"Monster Mash", "133556505496748", true},
         {"Slay Jump", "127922356397397", true},
-        {"Fat Shit", "118865365595523", true}
+        {"Jerk Off", "139882809426807", false},
+        {"Twerk", "77493234914180", false},
+        {"Back Shot", "104625684132073", false},
+        {"Lap Dance", "93816795776514", false},
+        {"Running Meme", "124138007910724", false},
+        {"Running Meme Twerk", "83523061911331", false},
+        {"Fat Shit", "118865365595523", false}
     }
 
     table.sort(emotes, function(a, b)
@@ -1097,17 +1104,21 @@ local function addButtonsToFrame()
 
         if showR6Label and isR6 then
             local r6Label = Instance.new("TextLabel", button)
-            r6Label.Size = UDim2.new(0, 50, 1, 0)
-            r6Label.Position = UDim2.new(0, -55, 0, 0)
+            r6Label.Size = UDim2.new(0, 28, 0, 16) -- smaller pill
+            r6Label.Position = UDim2.new(1, -36, 0.5, -8) -- right side, vertically centered
             r6Label.BackgroundColor3 = Color3.fromRGB(57, 190, 249)
             r6Label.Text = "R6"
-            r6Label.TextSize = 14
+            r6Label.TextSize = 12
             r6Label.Font = Enum.Font.GothamBold
             r6Label.TextColor3 = Color3.fromRGB(255, 255, 255)
             r6Label.BorderSizePixel = 0
+            r6Label.BackgroundTransparency = 0
+            r6Label.TextStrokeTransparency = 1 -- remove outline
+            r6Label.TextXAlignment = Enum.TextXAlignment.Center
+            r6Label.TextYAlignment = Enum.TextYAlignment.Center
 
             local labelCorner = Instance.new("UICorner", r6Label)
-            labelCorner.CornerRadius = UDim.new(0, 4)
+            labelCorner.CornerRadius = UDim.new(1, 0)
         end
 
         button.MouseEnter:Connect(function()
@@ -1154,6 +1165,9 @@ local function addButtonsToFrame()
 
         scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     end)
+
+    -- Add this line to set the correct CanvasSize after all buttons are created:
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
 end
 
 addButtonsToFrame()
