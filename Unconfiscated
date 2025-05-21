@@ -1065,6 +1065,14 @@ local function addButtonsToFrame()
                 resetTween:Play()
             end)
 
+            if emoteName == "Running Meme" then
+               currentValue = 0.1
+               updateSlider(currentValue)
+            else
+                currentValue = 1.1
+                updateSlider(currentValue)
+            end
+
             toggleFakeAnimation(emoteId)
         end)
 
@@ -1090,7 +1098,6 @@ local function addButtonsToFrame()
         scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     end)
 
-    -- Add this line to set the correct CanvasSize after all buttons are created:
     scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
 end
 
