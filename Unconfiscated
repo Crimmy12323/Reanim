@@ -5,7 +5,6 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
 
 local ghostEnabled = false
 local originalCharacter
@@ -25,27 +24,19 @@ local bodyParts = {
     "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
     "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }
-local animationKeybinds = {}
-
-local function scaleCFrame(cf, scale)
-    local pos = cf.Position * scale
-    local xRot, yRot, zRot = cf:ToEulerAnglesXYZ()
-    return CFrame.new(pos) * CFrame.Angles(xRot, yRot, zRot)
-end
 
 local function adjustCloneToGround(clone)
     if not clone then return end
     local lowestY = math.huge
     for _, part in ipairs(clone:GetDescendants()) do
         if part:IsA("BasePart") then
-            local bottomY = part.Position.Y - (part.Size.Y / 2)
+            local bottomY = part.Position.Y - (part.Size.Y * 0.5)
             if bottomY < lowestY then
                 lowestY = bottomY
             end
         end
     end
-    local groundY = 0
-    local offset = groundY - lowestY
+    local offset = 0 - lowestY
     if offset > 0 then
         if clone.PrimaryPart then
             clone:SetPrimaryPartCFrame(clone.PrimaryPart.CFrame + Vector3.new(0, offset, 0))
@@ -70,7 +61,9 @@ end
 
 local function restoreGuis()
     for _, gui in ipairs(preservedGuis) do
-        gui.ResetOnSpawn = true
+        if gui and gui.Parent then
+            gui.ResetOnSpawn = true
+        end
     end
     table.clear(preservedGuis)
 end
@@ -107,23 +100,6 @@ local function updateCloneScale()
     end
 
     adjustCloneToGround(ghostClone)
-end
-
-local function updateCloneTransparency()
-    if not ghostClone then return end
-    for _, part in pairs(ghostClone:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.Transparency = 1
-        end
-    end
-    local head = ghostClone:FindFirstChild("Head")
-    if head then
-        for _, child in ipairs(head:GetChildren()) do
-            if child:IsA("Decal") then
-                child.Transparency = 1
-            end
-        end
-    end
 end
 
 local function updateRagdolledParts()
@@ -287,6 +263,9 @@ local function setGhostEnabled(newState)
 end
 
 local fakeAnimStop
+local fakeAnimRunning = false
+fakeAnimStop = false
+local fakeAnimSpeed = 1
 local function stopFakeAnimation()
     fakeAnimStop = true
     fakeAnimRunning = false
@@ -312,9 +291,7 @@ local function stopFakeAnimation()
         end
     end
 end
-local fakeAnimRunning = false
-fakeAnimStop = false
-local fakeAnimSpeed = 1
+
 local function playFakeAnimation(animationId)
     if not ghostClone then
         warn("No fake character available!")
@@ -326,7 +303,8 @@ local function playFakeAnimation(animationId)
     end
     wait(0.1)
     cloneSize = 1
-    cloneWidth = 1    updateCloneScale()
+    cloneWidth = 1
+    updateCloneScale()
 
     for motor, orig in pairs(ghostOriginalMotorCFrames) do
         motor.C0 = orig.C0
@@ -442,7 +420,7 @@ local function playFakeAnimation(animationId)
         wait(0.03)
         end
     end)
-    end
+end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then return end
@@ -542,7 +520,6 @@ LocalPlayer.CharacterAdded:Connect(function(character)
                     humanoid:TakeDamage(humanoid.MaxHealth)
                 end)
 
-                -- Turn off reanimation
                 setGhostEnabled(false)
                 local toggleButton = gui:FindFirstChild("ToggleButton", true)
                 if (toggleButton) then
@@ -670,7 +647,6 @@ closeButton.MouseLeave:Connect(function()
 end)
 
 closeButton.MouseButton1Click:Connect(function()
-    -- Disable reanimation if it's enabled
     if ghostEnabled then
         setGhostEnabled(false)
         G2L["1b"].Text = "Enable R15 Reanimation"
@@ -770,7 +746,6 @@ G2L["speed_stroke"]["Color"] = Color3.fromRGB(58, 58, 58)
 G2L["speed_corner"] = Instance.new("UICorner", G2L["speed_frame"])
 G2L["speed_corner"]["CornerRadius"] = UDim.new(0, 4)
 
--- Speed Label
 G2L["speed_label"] = Instance.new("TextLabel", G2L["speed_frame"])
 G2L["speed_label"]["BorderSizePixel"] = 0
 G2L["speed_label"]["TextSize"] = 14
@@ -783,7 +758,6 @@ G2L["speed_label"]["BorderColor3"] = Color3.fromRGB(0, 0, 0)
 G2L["speed_label"]["Text"] = "Animation Speed:"
 G2L["speed_label"]["Position"] = UDim2.new(0.07, 0, -0.05, 0)
 
--- Speed Value Label
 G2L["speed_value"] = Instance.new("TextLabel", G2L["speed_frame"])
 G2L["speed_value"]["BorderSizePixel"] = 0
 G2L["speed_value"]["TextSize"] = 14
@@ -796,7 +770,6 @@ G2L["speed_value"]["BorderColor3"] = Color3.fromRGB(0, 0, 0)
 G2L["speed_value"]["Text"] = "1.1x"
 G2L["speed_value"]["Position"] = UDim2.new(0.8, 0, 0.1, 0)
 
--- Speed Slider
 G2L["speed_slider"] = Instance.new("Frame", G2L["speed_frame"])
 G2L["speed_slider"]["BorderSizePixel"] = 0
 G2L["speed_slider"]["BackgroundColor3"] = Color3.fromRGB(50, 50, 50)
@@ -826,7 +799,6 @@ G2L["speed_slider_thumb"]["Name"] = "SliderThumb"
 G2L["speed_slider_thumb_corner"] = Instance.new("UICorner", G2L["speed_slider_thumb"])
 G2L["speed_slider_thumb_corner"]["CornerRadius"] = UDim.new(1, 0)
 
--- Slider functionality
 local slider = G2L["speed_slider"]
 local fill = G2L["speed_slider_fill"]
 local thumb = G2L["speed_slider_thumb"]
@@ -851,25 +823,21 @@ local function setValueFromXPosition(x)
     updateSlider(currentValue)
 end
 
--- New variable to track if we're dragging the slider
 local uis = game:GetService("UserInputService")
 local isDraggingSlider = false
 
--- helper to track mouse movement while dragging
 local function onInputChanged(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement and isDraggingSlider then
         setValueFromXPosition(input.Position.X)
     end
 end
 
--- start dragging on thumb
 thumb.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         isDraggingSlider = true
     end
 end)
 
--- also allow clicking the track to jump immediately
 slider.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         isDraggingSlider = true
@@ -877,7 +845,6 @@ slider.InputBegan:Connect(function(input)
     end
 end)
 
--- stop dragging on mouse release
 thumb.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         isDraggingSlider = false
@@ -889,11 +856,9 @@ slider.InputEnded:Connect(function(input)
     end
 end)
 
--- update on movement
 thumb.InputChanged:Connect(onInputChanged)
 uis.InputChanged:Connect(onInputChanged)
 
--- initialize
 updateSlider(currentValue)
 
 G2L["18"] = Instance.new("Frame", G2L["2"]);
@@ -1018,7 +983,7 @@ local function toggleFakeAnimation(animationId)
     playFakeAnimation(animationId)
 end
 
-local showR6Label = true -- Configurable variable to enable or disable R6 labels
+local showR6Label = true
 
 local function addButtonsToFrame()
     local parent = G2L["e"]
@@ -1075,7 +1040,7 @@ local function addButtonsToFrame()
         {"Snoop's Walk", "95567389800091", false},
         {"Slalom Style", "123624215915471", false},
         {"Toosie Slide", "8230248004", false},
-        {"Take The L", "114109549820426", false},
+        {"Take The L", "114109549820426"},
         {"The Floss", "9003921069", false},
         {"Verve", "119993822512014", false},
         {"The Viper", "109195495448084", false},
@@ -1097,7 +1062,6 @@ local function addButtonsToFrame()
         {"Monster Mash", "133556505496748", true},
         {"Slay Jump", "127922356397397", true},
         {"Fat Shit", "118865365595523", true}
-
     }
 
     table.sort(emotes, function(a, b)
@@ -1199,7 +1163,7 @@ local dragging = false
 local dragInput, dragStart, startPos
 
 local function update(input)
-    if isDraggingSlider then return end -- Don't move frame if dragging slider
+    if isDraggingSlider then return end
     local delta = input.Position - dragStart
     G2L["2"].Position = UDim2.new(
         startPos.X.Scale,
@@ -1230,14 +1194,12 @@ G2L["2"].InputChanged:Connect(function(input)
 end)
 
 UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragging and not isDraggingSlider then -- Added check for isDraggingSlider
+    if input == dragInput and dragging and not isDraggingSlider then
         update(input)
     end
 end)
 
--- Handle GUI destruction
 G2L["1"].Destroying:Connect(function()
-    -- Disable reanimation if it's enabled
     if ghostEnabled then
         setGhostEnabled(false)
     end
