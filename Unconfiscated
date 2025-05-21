@@ -302,7 +302,7 @@ local function playFakeAnimation(animationId)
     if fakeAnimRunning then
         stopFakeAnimation()
     end
-    task.wait(0.1)
+    wait(0.1)
     cloneSize = 1
     cloneWidth = 1
     updateCloneScale()
