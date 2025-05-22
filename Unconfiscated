@@ -1016,6 +1016,7 @@ local function addButtonsToFrame()
         button.Font = Enum.Font.GothamSemibold
         button.TextColor3 = Color3.fromRGB(244, 244, 244)
         button.BorderSizePixel = 0
+        button.AutoButtonColor = false
 
         local buttonStroke = Instance.new("UIStroke", button)
         buttonStroke.Transparency = 0.23
@@ -1028,8 +1029,8 @@ local function addButtonsToFrame()
 
         if showR6Label and isR6 then
             local r6Label = Instance.new("TextLabel", button)
-            r6Label.Size = UDim2.new(0, 28, 0, 16) -- smaller pill
-            r6Label.Position = UDim2.new(1, -36, 0.5, -8) -- right side, vertically centered
+            r6Label.Size = UDim2.new(0, 28, 0, 16)
+            r6Label.Position = UDim2.new(1, -36, 0.5, -8)
             r6Label.BackgroundColor3 = Color3.fromRGB(57, 190, 249)
             r6Label.Text = "R6"
             r6Label.TextSize = 12
@@ -1037,7 +1038,7 @@ local function addButtonsToFrame()
             r6Label.TextColor3 = Color3.fromRGB(255, 255, 255)
             r6Label.BorderSizePixel = 0
             r6Label.BackgroundTransparency = 0
-            r6Label.TextStrokeTransparency = 1 -- remove outline
+            r6Label.TextStrokeTransparency = 1
             r6Label.TextXAlignment = Enum.TextXAlignment.Center
             r6Label.TextYAlignment = Enum.TextYAlignment.Center
 
@@ -1149,5 +1150,66 @@ G2L["1"].Destroying:Connect(function()
         setGhostEnabled(false)
     end
 end)
+
+local cleanupConnections = {}
+local function cleanup()
+    for _, conn in ipairs(cleanupConnections) do
+        if conn and typeof(conn) == "RBXScriptConnection" then
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+    table.clear(cleanupConnections)
+
+    stopFakeAnimation()
+
+    if ghostClone and ghostClone.Parent then
+        pcall(function() ghostClone:Destroy() end)
+        ghostClone = nil
+    end
+
+    restoreGuis()
+
+    if G2L and G2L["1"] and G2L["1"].Parent then
+        pcall(function() G2L["1"]:Destroy() end)
+    end
+
+    ghostEnabled = false
+    originalCharacter = nil
+    ghostClone = nil
+    originalCFrame = nil
+    originalAnimateScript = nil
+    ghostOriginalHipHeight = nil
+    cloneSize = 1
+    cloneWidth = 1
+    ghostOriginalSizes = {}
+    ghostOriginalMotorCFrames = {}
+end
+
+local function trackConnection(conn)
+    table.insert(cleanupConnections, conn)
+    return conn
+end
+
+trackConnection(UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+    if input.KeyCode == Enum.KeyCode.R then
+        stopFakeAnimation()
+        return
+    end
+end))
+
+if G2L and G2L["1"] then
+    trackConnection(G2L["1"].Destroying:Connect(function()
+        cleanup()
+    end))
+end
+
+local oldSetGhostEnabled = setGhostEnabled
+setGhostEnabled = function(newState)
+    oldSetGhostEnabled(newState)
+    if not newState then
+        cleanup()
+    end
+end
 
 return G2L["1"], require;
