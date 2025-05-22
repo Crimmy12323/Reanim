@@ -675,7 +675,7 @@ G2L["speed_label"] = Instance.new("TextLabel", G2L["speed_frame"])
 G2L["speed_label"]["BorderSizePixel"] = 0
 G2L["speed_label"]["TextSize"] = 14
 G2L["speed_label"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255)
-G2L["speed_label"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+G2L["speed_label"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
 G2L["speed_label"]["TextColor3"] = Color3.fromRGB(207, 207, 207)
 G2L["speed_label"]["BackgroundTransparency"] = 1
 G2L["speed_label"]["Size"] = UDim2.new(0, 100, 0, 28)
@@ -687,7 +687,7 @@ G2L["speed_value"] = Instance.new("TextLabel", G2L["speed_frame"])
 G2L["speed_value"]["BorderSizePixel"] = 0
 G2L["speed_value"]["TextSize"] = 14
 G2L["speed_value"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255)
-G2L["speed_value"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+G2L["speed_value"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
 G2L["speed_value"]["TextColor3"] = Color3.fromRGB(57, 190, 249)
 G2L["speed_value"]["BackgroundTransparency"] = 1
 G2L["speed_value"]["Size"] = UDim2.new(0, 50, 0, 28)
@@ -1067,8 +1067,8 @@ local function addButtonsToFrame()
             end)
 
             if emoteName == "Running Meme" then
-               currentValue = 0.1
-               updateSlider(currentValue)
+                currentValue = 0.1
+                updateSlider(currentValue)
             else
                 currentValue = 1.1
                 updateSlider(currentValue)
@@ -1102,30 +1102,476 @@ local function addButtonsToFrame()
     scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
 end
 
-addButtonsToFrame()
+-- Animation saving/loading
+local HttpService = game:GetService("HttpService")
+local ANIMATIONS_FILE = "customAnims.json"
+loadedAnimations.custom = loadedAnimations.custom or {}
 
-local UIS = game:GetService("UserInputService")
-local dragging = false
-local dragInput, dragStart, startPos
+local function saveAnimationsToFile()
+    if not isfolder("sentinel_animations") then
+        makefolder("sentinel_animations")
+    end
 
-local function update(input)
-    if isDraggingSlider then return end
-    local delta = input.Position - dragStart
-    G2L["2"].Position = UDim2.new(
-        startPos.X.Scale,
-        startPos.X.Offset + delta.X,
-        startPos.Y.Scale,
-        startPos.Y.Offset + delta.Y
-    )
+    local success, json = pcall(function()
+        return HttpService:JSONEncode(loadedAnimations.custom)
+    end)
+
+    if success then
+        writefile("sentinel_animations/"..ANIMATIONS_FILE, json)
+    else
+        warn("Failed to encode animations:", json)
+    end
 end
 
-G2L["2"].InputBegan:Connect(function(input)
+local function loadAnimationsFromFile()
+    if not isfolder("sentinel_animations") then return end
+    if not isfile("sentinel_animations/"..ANIMATIONS_FILE) then return end
+
+    local success, content = pcall(function()
+        return readfile("sentinel_animations/"..ANIMATIONS_FILE)
+    end)
+
+    if not success then return end
+
+    local success2, data = pcall(function()
+        return HttpService:JSONDecode(content)
+    end)
+
+    if success2 and data then
+        loadedAnimations.custom = data
+    end
+end
+
+local function addNewAnimation(animName, animId)
+    local success, animation = pcall(function()
+        return game:GetObjects("rbxassetid://" .. animId)[1]
+    end)
+
+    if not success or not animation then
+        warn("Invalid Animation ID.")
+        return false
+    end
+
+    table.insert(loadedAnimations.custom, {
+        Name = animName,
+        ID = animId,
+        IsR6 = false
+    })
+
+    saveAnimationsToFile()
+    return true
+end
+
+local function createAddEmoteGUI(parentGUI, refreshCallback)
+    local addEmoteGUI = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
+    addEmoteGUI.Name = "AddEmoteGUI"
+    addEmoteGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    addEmoteGUI.ResetOnSpawn = false
+
+    local addEmoteFrame = Instance.new("Frame", addEmoteGUI)
+    addEmoteFrame.Name = "AddEmote"
+    addEmoteFrame.BorderSizePixel = 0
+    addEmoteFrame.BackgroundColor3 = Color3.fromRGB(32, 32, 36)
+    addEmoteFrame.Size = UDim2.new(0, 235, 0, 138)
+    addEmoteFrame.Position = UDim2.new(0.5, -117.5, 0.5, -69)
+    addEmoteFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    addEmoteFrame.Visible = false
+
+    local UserInputService = game:GetService("UserInputService")
+    local runService = game:GetService("RunService")
+
+    local dragging = false
+    local dragInput
+    local dragStart
+    local startPos
+
+    local function Lerp(a, b, m)
+        return a + (b - a) * m
+    end
+
+    local lastMousePos
+    local lastGoalPos
+    local DRAG_SPEED = 15
+
+    local function Update(dt)
+        if not startPos then return end
+        if not dragging and lastGoalPos then
+            addEmoteFrame.Position = UDim2.new(
+                startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, lastGoalPos.X.Offset, dt * DRAG_SPEED),
+                startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, lastGoalPos.Y.Offset, dt * DRAG_SPEED)
+            )
+            return
+        end
+
+        local delta = lastMousePos - UserInputService:GetMouseLocation()
+        local xGoal = startPos.X.Offset - delta.X
+        local yGoal = startPos.Y.Offset - delta.Y
+        lastGoalPos = UDim2.new(startPos.X.Scale, xGoal, startPos.Y.Scale, yGoal)
+        addEmoteFrame.Position = UDim2.new(
+            startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, xGoal, dt * DRAG_SPEED),
+            startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, yGoal, dt * DRAG_SPEED)
+        )
+    end
+
+    addEmoteFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = addEmoteFrame.Position
+            lastMousePos = UserInputService:GetMouseLocation()
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    addEmoteFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    runService.Heartbeat:Connect(Update)
+
+    local emoteCorner = Instance.new("UICorner", addEmoteFrame)
+    emoteCorner.CornerRadius = UDim.new(0, 4)
+
+    local emoteStroke = Instance.new("UIStroke", addEmoteFrame)
+    emoteStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    emoteStroke.Thickness = 0.7
+    emoteStroke.Color = Color3.fromRGB(59, 59, 59)
+
+    local animNameBox = Instance.new("TextBox", addEmoteFrame)
+    animNameBox.Name = "AnimName"
+    animNameBox.CursorPosition = -1
+    animNameBox.PlaceholderColor3 = Color3.fromRGB(119, 119, 119)
+    animNameBox.BorderSizePixel = 0
+    animNameBox.TextSize = 14
+    animNameBox.TextColor3 = Color3.fromRGB(179, 179, 179)
+    animNameBox.BackgroundColor3 = Color3.fromRGB(35, 35, 39)
+    animNameBox.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+    animNameBox.PlaceholderText = "Animation Name"
+    animNameBox.Size = UDim2.new(0, 211, 0, 30)
+    animNameBox.Position = UDim2.new(0.05106, 0, 0.08642, 0)
+    animNameBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    animNameBox.Text = ""
+
+    local nameBoxCorner = Instance.new("UICorner", animNameBox)
+    nameBoxCorner.CornerRadius = UDim.new(0, 2)
+
+    local nameBoxStroke = Instance.new("UIStroke", animNameBox)
+    nameBoxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    nameBoxStroke.Thickness = 0.7
+    nameBoxStroke.Color = Color3.fromRGB(59, 59, 59)
+
+    local animIdBox = Instance.new("TextBox", addEmoteFrame)
+    animIdBox.Name = "AnimID"
+    animIdBox.CursorPosition = -1
+    animIdBox.PlaceholderColor3 = Color3.fromRGB(119, 119, 119)
+    animIdBox.BorderSizePixel = 0
+    animIdBox.TextSize = 14
+    animIdBox.TextColor3 = Color3.fromRGB(179, 179, 179)
+    animIdBox.BackgroundColor3 = Color3.fromRGB(35, 35, 39)
+    animIdBox.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+    animIdBox.PlaceholderText = "Animation ID"
+    animIdBox.Size = UDim2.new(0, 211, 0, 30)
+    animIdBox.Position = UDim2.new(0.05106, 0, 0.38808, 0)
+    animIdBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    animIdBox.Text = ""
+
+    local idBoxCorner = Instance.new("UICorner", animIdBox)
+    idBoxCorner.CornerRadius = UDim.new(0, 2)
+
+    local idBoxStroke = Instance.new("UIStroke", animIdBox)
+    idBoxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    idBoxStroke.Thickness = 0.7
+    idBoxStroke.Color = Color3.fromRGB(59, 59, 59)
+
+    local confirmButton = Instance.new("TextButton", addEmoteFrame)
+    confirmButton.Name = "Confirm"
+    confirmButton.BorderSizePixel = 0
+    confirmButton.TextColor3 = Color3.fromRGB(187, 187, 187)
+    confirmButton.TextSize = 15
+    confirmButton.BackgroundColor3 = Color3.fromRGB(43, 43, 48)
+    confirmButton.FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+    confirmButton.Size = UDim2.new(0, 210, 0, 29)
+    confirmButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
+    confirmButton.Text = "Confirm"
+    confirmButton.Position = UDim2.new(0.05106, 0, 0.7029, 0)
+
+    local confirmCorner = Instance.new("UICorner", confirmButton)
+    confirmCorner.CornerRadius = UDim.new(0, 4)
+
+    local confirmStroke = Instance.new("UIStroke", confirmButton)
+    confirmStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    confirmStroke.Thickness = 0.7
+    confirmStroke.Color = Color3.fromRGB(59, 59, 59)
+
+    confirmButton.MouseButton1Click:Connect(function()
+        local animName = animNameBox.Text
+        local animId = animIdBox.Text
+
+        if animName == "" or animId == "" then
+            warn("Please enter both animation name and ID")
+            return
+        end
+
+        if addNewAnimation(animName, animId) then
+            animNameBox.Text = ""
+            animIdBox.Text = ""
+            addEmoteFrame.Visible = false
+            if refreshCallback then
+                refreshCallback()
+            end
+        else
+            warn("Failed to add animation - invalid ID")
+        end
+    end)
+
+    local function toggleAddEmoteGUI()
+        addEmoteFrame.Visible = not addEmoteFrame.Visible
+        if addEmoteFrame.Visible then
+            animNameBox.Text = ""
+            animIdBox.Text = ""
+        end
+    end
+
+    return {
+        GUI = addEmoteGUI,
+        toggle = toggleAddEmoteGUI
+    }
+end
+
+loadAnimationsFromFile()
+
+local function addButtonsToFrame()
+    local parent = G2L["e"]
+    parent:ClearAllChildren()
+    local scrollingFrame = Instance.new("ScrollingFrame", parent)
+    scrollingFrame.Name = "EmoteScrollingFrame"
+    scrollingFrame.Size = UDim2.new(1, 0, 0.87, 0)
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2010)
+    scrollingFrame.ScrollBarThickness = 5
+    scrollingFrame.BackgroundTransparency = 1
+
+    local yOffset = 10
+
+    local emotes = {
+        {"Back On 74", "108088087568172", false},
+        {"Boogie Bomb", "90159280044964", false},
+        {"Billy Bounce", "96342044032488", false},
+        {"Boogie Down", "83261869707370", false},
+        {"Cupid's Arrow", "122288826913668", false},
+        {"California Gurls", "131457845572132", false},
+        {"Chase Me Down", "97455319886162", false},
+        {"Default Dance", "9836885605", false},
+        {"Dancery", "135978042300523", false},
+        {"Desirable", "80125132098992", false},
+        {"Disco Fever", "9836369561", false},
+        {"Evil Plan", "99449894581351", false},
+        {"Electro Shuffle", "9116910876", false},
+        {"Electro Swing", "7839963379", false},
+        {"FreeStylin", "107995227083576", false},
+        {"Fresh", "9116897929", false},
+        {"Groove Destroyer", "18147813725", false},
+        {"Griddy", "135342670717393", false},
+        {"Hot Marat", "7107202783", false},
+        {"Hakari Dance", "73789839912852", true},
+        {"Hey Now", "7124753337", false},
+        {"Hype", "121532134633896", false},
+        {"Head Banger", "114573617035275", false},
+        {"Infinite Dab", "74538409545244"},
+        {"Jabba Switchway", "8229514367", false},
+        {"Jubi Slide", "16570530493", false},
+        {"Lucid Dream", "108895351743195", false},
+        {"Look At Me", "129004554500202", false},
+        {"Mr Blue Sky", "8603017969", false},
+        {"Maximum Bounce", "8703876822", false},
+        {"Miku Live", "102039871027058", false},
+        {"Miku Miku Beam", "116802170205791", false},
+        {"No Cure", "76827103391437", false},
+        {"Orange Justice", "11212163754", false},
+        {"Phonky Turn", "122815417402057", false},
+        {"Pull Up", "8871805743", false},
+        {"Poki", "83405509049719", false},
+        {"Party Hips", "91664350716653", false},
+        {"Reanimated", "7757686890", false},
+        {"Scenario", "8924083749", false},
+        {"Snoop's Walk", "95567389800091", false},
+        {"Slalom Style", "123624215915471", false},
+        {"Toosie Slide", "8230248004", false},
+        {"Take The L", "114109549820426"},
+        {"The Floss", "9003921069", false},
+        {"Verve", "119993822512014", false},
+        {"The Viper", "109195495448084", false},
+        {"What You Want", "112811217802231", false},
+        {"Unlock It", "104997186005133", true},
+        {"Goofy Twerk", "71819565973448", false},
+        {"Sicko Mode", "100379545014024", true},
+        {"Stock Shuffle", "95645590336118", true},
+        {"Billy Bounce R6", "104963686949319", true},
+        {"Embarrassing", "110978487197470", true},
+        {"Arona", "134041849348680", true},
+        {"Goofy Ahh Hump", "116682294641877", false},
+        {"Omni Man Pose", "83598910354775", false},
+        {"Self Head", "93659508999288", false},
+        {"Get Butt Fucked", "97970042209398", false},
+        {"2 Armed Stroke", "98873055560654", false},
+        {"Hakari 2", "70986254530914", true},
+        {"Cum Shot", "139791836037885", false},
+        {"Monster Mash", "133556505496748", true},
+        {"Slay Jump", "127922356397397", true},
+        {"Jerk Off", "139882809426807", false},
+        {"Twerk", "77493234914180", false},
+        {"Back Shot", "104625684132073", false},
+        {"Lap Dance", "93816795776514", false},
+        {"Running Meme", "124138007910724", false},
+        {"Running Meme Twerk", "83523061911331", false},
+        {"Fat Shit", "118865365595523", false}
+    }
+
+    -- Add custom animations
+    for _, custom in ipairs(loadedAnimations.custom or {}) do
+        table.insert(emotes, {custom.Name, custom.ID, custom.IsR6})
+    end
+
+    table.sort(emotes, function(a, b)
+        return a[1]:lower() < b[1]:lower()
+    end)
+
+    local buttons = {}
+
+    for _, emote in ipairs(emotes) do
+        local emoteName = emote[1]
+        local emoteId = emote[2]
+        local isR6 = emote[3]
+
+        local button = Instance.new("TextButton", scrollingFrame)
+        button.Name = emoteName
+        button.Size = UDim2.new(1, -20, 0, 32)
+        button.Position = UDim2.new(0, 8, 0, yOffset)
+        button.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
+        button.Text = emoteName
+        button.TextSize = 17
+        button.Font = Enum.Font.GothamSemibold
+        button.TextColor3 = Color3.fromRGB(244, 244, 244)
+        button.BorderSizePixel = 0
+        button.AutoButtonColor = false
+
+        local buttonStroke = Instance.new("UIStroke", button)
+        buttonStroke.Transparency = 0.23
+        buttonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        buttonStroke.Thickness = 0.7
+        buttonStroke.Color = Color3.fromRGB(58, 58, 58)
+
+        local buttonCorner = Instance.new("UICorner", button)
+        buttonCorner.CornerRadius = UDim.new(0, 4)
+
+        if showR6Label and isR6 then
+            local r6Label = Instance.new("TextLabel", button)
+            r6Label.Size = UDim2.new(0, 28, 0, 16)
+            r6Label.Position = UDim2.new(1, -36, 0.5, -8)
+            r6Label.BackgroundColor3 = Color3.fromRGB(57, 190, 249)
+            r6Label.Text = "R6"
+            r6Label.TextSize = 12
+            r6Label.Font = Enum.Font.GothamBold
+            r6Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            r6Label.BorderSizePixel = 0
+            r6Label.BackgroundTransparency = 0
+            r6Label.TextStrokeTransparency = 1
+            r6Label.TextXAlignment = Enum.TextXAlignment.Center
+            r6Label.TextYAlignment = Enum.TextYAlignment.Center
+
+            local labelCorner = Instance.new("UICorner", r6Label)
+            labelCorner.CornerRadius = UDim.new(1, 0)
+        end
+
+        button.MouseEnter:Connect(function()
+            local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
+            hoverTween:Play()
+        end)
+
+        button.MouseLeave:Connect(function()
+            local leaveTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
+            leaveTween:Play()
+        end)
+
+        button.MouseButton1Click:Connect(function()
+            button.TextColor3 = Color3.fromRGB(244, 244, 244)
+
+            local clickTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(57, 190, 249)})
+            clickTween:Play()
+            clickTween.Completed:Connect(function()
+                local resetTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(244, 244, 244)})
+                resetTween:Play()
+            end)
+
+            if emoteName == "Running Meme" then
+                currentValue = 0.1
+                updateSlider(currentValue)
+            else
+                currentValue = 1.1
+                updateSlider(currentValue)
+            end
+
+            toggleFakeAnimation(emoteId)
+        end)
+
+        table.insert(buttons, button)
+        yOffset = yOffset + 40
+    end
+
+    local searchBox = G2L["a"]
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local searchText = searchBox.Text:lower()
+        yOffset = 10
+
+        for _, button in ipairs(buttons) do
+            if button.Name:lower():find(searchText) then
+                button.Visible = true
+                button.Position = UDim2.new(0, 8, 0, yOffset)
+                yOffset = yOffset + 40
+            else
+                button.Visible = false
+            end
+        end
+
+        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+    end)
+
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
+end
+
+-- Call it once to populate the emote list at startup
+addButtonsToFrame()
+
+-- Create the Add Emote GUI and wire up the Add button
+local addEmotePopup = createAddEmoteGUI(G2L["1"], addButtonsToFrame)
+G2L["c"].MouseButton1Click:Connect(function()
+    addEmotePopup.toggle()
+end)
+
+G2L["1"].Destroying:Connect(function()
+    if ghostEnabled then
+        setGhostEnabled(false)
+    end
+end)
+
+-- Make the main GUI draggable
+local dragFrame = G2L["2"]
+local dragging, dragInput, dragStart, startPos
+
+dragFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
-        startPos = G2L["2"].Position
+        startPos = dragFrame.Position
 
         input.Changed:Connect(function()
+
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
             end
@@ -1133,21 +1579,19 @@ G2L["2"].InputBegan:Connect(function(input)
     end
 end)
 
-G2L["2"].InputChanged:Connect(function(input)
+dragFrame.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement then
         dragInput = input
     end
 end)
 
-UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragging and not isDraggingSlider then
-        update(input)
-    end
-end)
-
-G2L["1"].Destroying:Connect(function()
-    if ghostEnabled then
-        setGhostEnabled(false)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        dragFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
     end
 end)
 
