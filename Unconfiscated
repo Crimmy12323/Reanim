@@ -438,28 +438,6 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     if humanoid then
         humanoid.Died:Connect(function()
             if ghostEnabled then
-                humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-                task.delay(0.5, function()
-                    humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, true)
-                    humanoid:TakeDamage(humanoid.MaxHealth)
-                end)
-
-                setGhostEnabled(false)
-                local toggleButton = gui:FindFirstChild("ToggleButton", true)
-                if (toggleButton) then
-                    toggleButton.Text = "Enable Reanimation"
-                    toggleButton.BackgroundColor3 = Color3.fromRGB(76, 175, 80)
-                end
-            end
-        end)
-    end
-end)
-
-LocalPlayer.CharacterAdded:Connect(function(character)
-    local humanoid = character:WaitForChild("Humanoid", 5)
-    if humanoid then
-        humanoid.Died:Connect(function()
-            if ghostEnabled then
                 setGhostEnabled(false)
                 local toggleButton = gui:FindFirstChild("ToggleButton", true)
                 if toggleButton then
@@ -470,56 +448,6 @@ LocalPlayer.CharacterAdded:Connect(function(character)
         end)
     end
 end)
-
-local function C_e()
-    local player = Players.LocalPlayer
-
-    local playerGui = player:WaitForChild("PlayerGui")
-    local emoteGui = playerGui:FindFirstChild("EmoteGui")
-    if not emoteGui then
-        warn("Reanimation Loaded")
-        return
-    end
-    local emoteFrame = emoteGui:FindFirstChild("EmoteFrame")
-    if not emoteFrame then
-        warn("EmoteFrame not found!")
-        return
-    end
-    local scrollingFrame = emoteFrame:FindFirstChild("ScrollingFrame")
-    if not scrollingFrame then
-        warn("ScrollingFrame not found!")
-        return
-    end
-    local emoteButton1 = scrollingFrame:FindFirstChild("Emote1")
-    local emoteButton2 = scrollingFrame:FindFirstChild("Emote2")
-    local emoteButton3 = scrollingFrame:FindFirstChild("Emote3")
-
-    local function playReanimation(animationId)
-        if ghostEnabled then
-            playFakeAnimation(animationId)
-        else
-            warn("Reanimation is not enabled!")
-        end
-    end
-
-    if emoteButton1 then
-        emoteButton1.MouseButton1Click:Connect(function()
-            playReanimation(animationId1)
-        end)
-    end
-    if emoteButton2 then
-        emoteButton2.MouseButton1Click:Connect(function()
-            playReanimation(animationId2)
-        end)
-    end
-    if emoteButton3 then
-        emoteButton3.MouseButton1Click:Connect(function()
-            playReanimation(animationId3)
-        end)
-    end
-end
-
-task.spawn(C_e)
 
 local G2L = {};
 
