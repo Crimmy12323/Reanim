@@ -1346,7 +1346,7 @@ local function addButtonsToFrame()
                 resetTween:Play()
             end)
 
-            if emoteName == "Running Meme" then
+            if emoteName == "Runaway" then
                 currentValue = 0.1
                 updateSlider(currentValue)
             else
