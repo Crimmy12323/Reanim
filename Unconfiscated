@@ -270,25 +270,24 @@ local fakeAnimSpeed = 1.1
 local function stopFakeAnimation()
     fakeAnimStop = true
     fakeAnimRunning = false
+    if not ghostClone then return end
     for i,script in pairs(ghostClone:GetChildren()) do
         if script:IsA("LocalScript") and script.Enabled == false then
             script.Enabled=true
         end
     end
-    if ghostClone then
-        for motor, orig in pairs(ghostOriginalMotorCFrames) do
-            if motor and motor:IsA("Motor6D") then
-                motor.C0 = orig.C0
-                motor.C1 = orig.C1
-            end
+    for motor, orig in pairs(ghostOriginalMotorCFrames) do
+        if motor and motor:IsA("Motor6D") then
+            motor.C0 = orig.C0
+            motor.C1 = orig.C1
         end
+    end
 
-        for _, partName in ipairs(bodyParts) do
-            local part = ghostClone:FindFirstChild(partName)
-            if part and part:IsA("BasePart") then
-                part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
-            end
+    for _, partName in ipairs(bodyParts) do
+        local part = ghostClone:FindFirstChild(partName)
+        if part and part:IsA("BasePart") then
+            part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         end
     end
 end
@@ -475,11 +474,25 @@ end)
 local function C_e()
     local player = Players.LocalPlayer
 
-    local emoteFrame = player:WaitForChild("PlayerGui"):WaitForChild("EmoteGui"):WaitForChild("EmoteFrame")
-    local scrollingFrame = emoteFrame:WaitForChild("ScrollingFrame")
-    local emoteButton1 = scrollingFrame:WaitForChild("Emote1")
-    local emoteButton2 = scrollingFrame:WaitForChild("Emote2")
-    local emoteButton3 = scrollingFrame:WaitForChild("Emote3")
+    local playerGui = player:WaitForChild("PlayerGui")
+    local emoteGui = playerGui:FindFirstChild("EmoteGui")
+    if not emoteGui then
+        warn("Reanimation Loaded")
+        return
+    end
+    local emoteFrame = emoteGui:FindFirstChild("EmoteFrame")
+    if not emoteFrame then
+        warn("EmoteFrame not found!")
+        return
+    end
+    local scrollingFrame = emoteFrame:FindFirstChild("ScrollingFrame")
+    if not scrollingFrame then
+        warn("ScrollingFrame not found!")
+        return
+    end
+    local emoteButton1 = scrollingFrame:FindFirstChild("Emote1")
+    local emoteButton2 = scrollingFrame:FindFirstChild("Emote2")
+    local emoteButton3 = scrollingFrame:FindFirstChild("Emote3")
 
     local function playReanimation(animationId)
         if ghostEnabled then
@@ -489,17 +502,21 @@ local function C_e()
         end
     end
 
-    emoteButton1.MouseButton1Click:Connect(function()
-        playReanimation(animationId1)
-    end)
-
-    emoteButton2.MouseButton1Click:Connect(function()
-        playReanimation(animationId2)
-    end)
-
-    emoteButton3.MouseButton1Click:Connect(function()
-        playReanimation(animationId3)
-    end)
+    if emoteButton1 then
+        emoteButton1.MouseButton1Click:Connect(function()
+            playReanimation(animationId1)
+        end)
+    end
+    if emoteButton2 then
+        emoteButton2.MouseButton1Click:Connect(function()
+            playReanimation(animationId2)
+        end)
+    end
+    if emoteButton3 then
+        emoteButton3.MouseButton1Click:Connect(function()
+            playReanimation(animationId3)
+        end)
+    end
 end
 
 task.spawn(C_e)
@@ -653,7 +670,6 @@ G2L["10"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
 G2L["10"]["Thickness"] = 0.7;
 G2L["10"]["Color"] = Color3.fromRGB(58, 58, 58);
 
--- Speed Slider Frame
 G2L["speed_frame"] = Instance.new("Frame", G2L["2"])
 G2L["speed_frame"]["BorderSizePixel"] = 0
 G2L["speed_frame"]["BackgroundColor3"] = Color3.fromRGB(31, 31, 35)
@@ -674,7 +690,7 @@ G2L["speed_corner"]["CornerRadius"] = UDim.new(0, 4)
 G2L["speed_label"] = Instance.new("TextLabel", G2L["speed_frame"])
 G2L["speed_label"]["BorderSizePixel"] = 0
 G2L["speed_label"]["TextSize"] = 14
-G2L["speed_label"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255)
+G2L["speed_label"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
 G2L["speed_label"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
 G2L["speed_label"]["TextColor3"] = Color3.fromRGB(207, 207, 207)
 G2L["speed_label"]["BackgroundTransparency"] = 1
@@ -686,7 +702,7 @@ G2L["speed_label"]["Position"] = UDim2.new(0.07, 0, -0.05, 0)
 G2L["speed_value"] = Instance.new("TextLabel", G2L["speed_frame"])
 G2L["speed_value"]["BorderSizePixel"] = 0
 G2L["speed_value"]["TextSize"] = 14
-G2L["speed_value"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255)
+G2L["speed_value"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
 G2L["speed_value"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
 G2L["speed_value"]["TextColor3"] = Color3.fromRGB(57, 190, 249)
 G2L["speed_value"]["BackgroundTransparency"] = 1
@@ -735,8 +751,8 @@ local currentValue = 1.1
 
 local function updateSlider(value)
     local normalized = (value - minValue) / (maxValue - minValue)
-    fill.Size = UDim2.new(normalized, 0, 1, 0)
-    thumb.Position = UDim2.new(normalized, -7, 0, -5)
+    TweenService:Create(fill, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(normalized, 0, 1, 0)}):Play()
+    TweenService:Create(thumb, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(normalized, -7, 0, -5)}):Play()
     valueLabel.Text = string.format("%.1fx", value)
     fakeAnimSpeed = value
 end
@@ -807,7 +823,7 @@ G2L["1b"] = Instance.new("TextLabel", G2L["18"]);
 G2L["1b"]["BorderSizePixel"] = 0;
 G2L["1b"]["TextSize"] = 14;
 G2L["1b"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
-G2L["1b"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.SemiBold, Enum.FontStyle.Normal);
+G2L["1b"]["FontFace"] = Font.new([[rbxassetid://12187365977]], Enum.FontWeight.Bold, Enum.FontStyle.Normal);
 G2L["1b"]["TextColor3"] = Color3.fromRGB(207, 207, 207);
 G2L["1b"]["BackgroundTransparency"] = 1;
 G2L["1b"]["Size"] = UDim2.new(0, 200, 0, 28);
@@ -910,199 +926,6 @@ end
 
 local showR6Label = true
 
-local function addButtonsToFrame()
-    local parent = G2L["e"]
-    local scrollingFrame = Instance.new("ScrollingFrame", parent)
-    scrollingFrame.Name = "EmoteScrollingFrame"
-    scrollingFrame.Size = UDim2.new(1, 0, 0.87, 0)
-    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 2010)
-    scrollingFrame.ScrollBarThickness = 5
-    scrollingFrame.BackgroundTransparency = 1
-
-    local yOffset = 10
-
-    local emotes = {
-        {"Back On 74", "108088087568172", false},
-        {"Boogie Bomb", "90159280044964", false},
-        {"Billy Bounce", "96342044032488", false},
-        {"Boogie Down", "83261869707370", false},
-        {"Cupid's Arrow", "122288826913668", false},
-        {"California Gurls", "131457845572132", false},
-        {"Chase Me Down", "97455319886162", false},
-        {"Default Dance", "9836885605", false},
-        {"Dancery", "135978042300523", false},
-        {"Desirable", "80125132098992", false},
-        {"Disco Fever", "9836369561", false},
-        {"Evil Plan", "99449894581351", false},
-        {"Electro Shuffle", "9116910876", false},
-        {"Electro Swing", "7839963379", false},
-        {"FreeStylin", "107995227083576", false},
-        {"Fresh", "9116897929", false},
-        {"Groove Destroyer", "18147813725", false},
-        {"Griddy", "135342670717393", false},
-        {"Hot Marat", "7107202783", false},
-        {"Hakari Dance", "73789839912852", true},
-        {"Hey Now", "7124753337", false},
-        {"Hype", "121532134633896", false},
-        {"Head Banger", "114573617035275", false},
-        {"Infinite Dab", "74538409545244"},
-        {"Jabba Switchway", "8229514367", false},
-        {"Jubi Slide", "16570530493", false},
-        {"Lucid Dream", "108895351743195", false},
-        {"Look At Me", "129004554500202", false},
-        {"Mr Blue Sky", "8603017969", false},
-        {"Maximum Bounce", "8703876822", false},
-        {"Miku Live", "102039871027058", false},
-        {"Miku Miku Beam", "116802170205791", false},
-        {"No Cure", "76827103391437", false},
-        {"Orange Justice", "11212163754", false},
-        {"Phonky Turn", "122815417402057", false},
-        {"Pull Up", "8871805743", false},
-        {"Poki", "83405509049719", false},
-        {"Party Hips", "91664350716653", false},
-        {"Reanimated", "7757686890", false},
-        {"Scenario", "8924083749", false},
-        {"Snoop's Walk", "95567389800091", false},
-        {"Slalom Style", "123624215915471", false},
-        {"Toosie Slide", "8230248004", false},
-        {"Take The L", "114109549820426"},
-        {"The Floss", "9003921069", false},
-        {"Verve", "119993822512014", false},
-        {"The Viper", "109195495448084", false},
-        {"What You Want", "112811217802231", false},
-        {"Unlock It", "104997186005133", true},
-        {"Goofy Twerk", "71819565973448", false},
-        {"Sicko Mode", "100379545014024", true},
-        {"Stock Shuffle", "95645590336118", true},
-        {"Billy Bounce R6", "104963686949319", true},
-        {"Embarrassing", "110978487197470", true},
-        {"Arona", "134041849348680", true},
-        {"Goofy Ahh Hump", "116682294641877", false},
-        {"Omni Man Pose", "83598910354775", false},
-        {"Self Head", "93659508999288", false},
-        {"Get Butt Fucked", "97970042209398", false},
-        {"2 Armed Stroke", "98873055560654", false},
-        {"Hakari 2", "70986254530914", true},
-        {"Cum Shot", "139791836037885", false},
-        {"Monster Mash", "133556505496748", true},
-        {"Slay Jump", "127922356397397", true},
-        {"Jerk Off", "139882809426807", false},
-        {"Twerk", "77493234914180", false},
-        {"Back Shot", "104625684132073", false},
-        {"Lap Dance", "93816795776514", false},
-        {"Running Meme", "124138007910724", false},
-        {"Running Meme Twerk", "83523061911331", false},
-        {"Fat Shit", "118865365595523", false}
-    }
-
-    table.sort(emotes, function(a, b)
-        return a[1]:lower() < b[1]:lower()
-    end)
-
-    local buttons = {}
-
-    for _, emote in ipairs(emotes) do
-        local emoteName = emote[1]
-        local emoteId = emote[2]
-        local isR6 = emote[3]
-
-        local button = Instance.new("TextButton", scrollingFrame)
-        button.Name = emoteName
-        button.Size = UDim2.new(1, -20, 0, 32)
-        button.Position = UDim2.new(0, 8, 0, yOffset)
-        button.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
-        button.Text = emoteName
-        button.TextSize = 17
-        button.Font = Enum.Font.GothamSemibold
-        button.TextColor3 = Color3.fromRGB(244, 244, 244)
-        button.BorderSizePixel = 0
-        button.AutoButtonColor = false
-
-        local buttonStroke = Instance.new("UIStroke", button)
-        buttonStroke.Transparency = 0.23
-        buttonStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        buttonStroke.Thickness = 0.7
-        buttonStroke.Color = Color3.fromRGB(58, 58, 58)
-    
-        local buttonCorner = Instance.new("UICorner", button)
-        buttonCorner.CornerRadius = UDim.new(0, 4)
-
-        if showR6Label and isR6 then
-            local r6Label = Instance.new("TextLabel", button)
-            r6Label.Size = UDim2.new(0, 28, 0, 16)
-            r6Label.Position = UDim2.new(1, -36, 0.5, -8)
-            r6Label.BackgroundColor3 = Color3.fromRGB(57, 190, 249)
-            r6Label.Text = "R6"
-            r6Label.TextSize = 12
-            r6Label.Font = Enum.Font.GothamBold
-            r6Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-            r6Label.BorderSizePixel = 0
-            r6Label.BackgroundTransparency = 0
-            r6Label.TextStrokeTransparency = 1
-            r6Label.TextXAlignment = Enum.TextXAlignment.Center
-            r6Label.TextYAlignment = Enum.TextYAlignment.Center
-
-            local labelCorner = Instance.new("UICorner", r6Label)
-            labelCorner.CornerRadius = UDim.new(1, 0)
-        end
-
-        button.MouseEnter:Connect(function()
-            local hoverTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
-            hoverTween:Play()
-        end)
-
-        button.MouseLeave:Connect(function()
-            local leaveTween = TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(31, 31, 35)})
-            leaveTween:Play()
-        end)
-
-        button.MouseButton1Click:Connect(function()
-            button.TextColor3 = Color3.fromRGB(244, 244, 244)
-
-            local clickTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(57, 190, 249)})
-            clickTween:Play()
-            clickTween.Completed:Connect(function()
-                local resetTween = TweenService:Create(button, TweenInfo.new(0.2), {TextColor3 = Color3.fromRGB(244, 244, 244)})
-                resetTween:Play()
-            end)
-
-            if emoteName == "Running Meme" then
-                currentValue = 0.1
-                updateSlider(currentValue)
-            else
-                currentValue = 1.1
-                updateSlider(currentValue)
-            end
-
-            toggleFakeAnimation(emoteId)
-        end)
-
-        table.insert(buttons, button)
-        yOffset = yOffset + 40
-    end
-
-    local searchBox = G2L["a"]
-    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        local searchText = searchBox.Text:lower()
-        yOffset = 10
-
-        for _, button in ipairs(buttons) do
-            if button.Name:lower():find(searchText) then
-                button.Visible = true
-                button.Position = UDim2.new(0, 8, 0, yOffset)
-                yOffset = yOffset + 40
-            else
-                button.Visible = false
-            end
-        end
-
-        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
-    end)
-
-    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
-end
-
--- Animation saving/loading
 local HttpService = game:GetService("HttpService")
 local ANIMATIONS_FILE = "customAnims.json"
 loadedAnimations.custom = loadedAnimations.custom or {}
@@ -1347,6 +1170,8 @@ end
 
 loadAnimationsFromFile()
 
+local emoteKeybinds = {}
+
 local function addButtonsToFrame()
     local parent = G2L["e"]
     parent:ClearAllChildren()
@@ -1433,7 +1258,6 @@ local function addButtonsToFrame()
         {"Fat Shit", "118865365595523", false}
     }
 
-    -- Add custom animations
     for _, custom in ipairs(loadedAnimations.custom or {}) do
         table.insert(emotes, {custom.Name, custom.ID, custom.IsR6})
     end
@@ -1449,10 +1273,92 @@ local function addButtonsToFrame()
         local emoteId = emote[2]
         local isR6 = emote[3]
 
+        local keyBox = Instance.new("TextBox", scrollingFrame)
+        keyBox.Name = "KeybindBox"
+        keyBox.Size = UDim2.new(0, 32, 0, 32)
+        keyBox.Position = UDim2.new(0, 8, 0, yOffset)
+        keyBox.BackgroundColor3 = Color3.fromRGB(35, 35, 39)
+        keyBox.Text = ""
+        keyBox.TextSize = 14
+        keyBox.Font = Enum.Font.GothamSemibold
+        keyBox.TextColor3 = Color3.fromRGB(179, 179, 179)
+        keyBox.BorderSizePixel = 0
+        keyBox.ClearTextOnFocus = false
+        keyBox.PlaceholderText = "..."
+        keyBox.TextXAlignment = Enum.TextXAlignment.Center
+
+        local keyCorner = Instance.new("UICorner", keyBox)
+        keyCorner.CornerRadius = UDim.new(0, 4)
+
+        local keyStroke = Instance.new("UIStroke", keyBox)
+        keyStroke.Transparency = 0.23
+        keyStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        keyStroke.Thickness = 0.7
+        keyStroke.Color = Color3.fromRGB(58, 58, 58)
+
+        keyBox.Focused:Connect(function()
+            keyBox.Text = ""
+            if keyInputConn then
+                keyInputConn:Disconnect()
+                keyInputConn = nil
+            end
+            keyInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+                if gp then return end
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    emoteKeybinds[emoteId] = input.KeyCode
+                    keyBox.Text = input.KeyCode.Name
+                    if keyInputConn then
+                        keyInputConn:Disconnect()
+                        keyInputConn = nil
+                    end
+                    keyBox:ReleaseFocus()
+                elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+                    emoteKeybinds[emoteId] = nil
+                    keyBox.Text = ""
+                    if keyInputConn then
+                        keyInputConn:Disconnect()
+                        keyInputConn = nil
+                    end
+                    keyBox:ReleaseFocus()
+                end
+            end)
+        end)
+
+        keyBox.FocusLost:Connect(function()
+            if keyInputConn then
+                keyInputConn:Disconnect()
+                keyInputConn = nil
+            end
+            if emoteKeybinds[emoteId] then
+                keyBox.Text = emoteKeybinds[emoteId].Name
+            else
+                keyBox.Text = ""
+            end
+        end)
+
+        keyBox:GetPropertyChangedSignal("Text"):Connect(function()
+            local text = keyBox.Text
+            if #text == 1 then
+                local upper = text:upper()
+                local foundKey = nil
+                for _, key in pairs(Enum.KeyCode:GetEnumItems()) do
+                    if key.Name == upper then
+                        foundKey = key
+                        break
+                    end
+                end
+                if foundKey then
+                    emoteKeybinds[emoteId] = foundKey
+                    keyBox.Text = foundKey.Name
+                    keyBox:ReleaseFocus()
+                end
+            end
+        end)
+
         local button = Instance.new("TextButton", scrollingFrame)
         button.Name = emoteName
-        button.Size = UDim2.new(1, -20, 0, 32)
-        button.Position = UDim2.new(0, 8, 0, yOffset)
+        button.Size = UDim2.new(1, -68, 0, 32)
+        button.Position = UDim2.new(0, 48, 0, yOffset)
         button.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
         button.Text = emoteName
         button.TextSize = 17
@@ -1520,22 +1426,84 @@ local function addButtonsToFrame()
             toggleFakeAnimation(emoteId)
         end)
 
-        table.insert(buttons, button)
+        keyBox.Focused:Connect(function()
+            keyBox.Text = ""
+            if keyInputConn then
+                keyInputConn:Disconnect()
+                keyInputConn = nil
+            end
+            keyInputConn = game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+                if gp then return end
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    emoteKeybinds[emoteId] = input.KeyCode
+                    keyBox.Text = input.KeyCode.Name
+                    if keyInputConn then
+                        keyInputConn:Disconnect()
+                        keyInputConn = nil
+                    end
+                    keyBox:ReleaseFocus()
+                elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+                    emoteKeybinds[emoteId] = nil
+                    keyBox.Text = ""
+                    if keyInputConn then
+                        keyInputConn:Disconnect()
+                        keyInputConn = nil
+                    end
+                    keyBox:ReleaseFocus()
+                end
+            end)
+        end)
+
+        keyBox.FocusLost:Connect(function()
+            if keyInputConn then
+                keyInputConn:Disconnect()
+                keyInputConn = nil
+            end
+            if emoteKeybinds[emoteId] then
+                keyBox.Text = emoteKeybinds[emoteId].Name
+            else
+                keyBox.Text = ""
+            end
+        end)
+
+        if emoteKeybinds[emoteId] then
+            keyBox.Text = emoteKeybinds[emoteId].Name
+        else
+            keyBox.Text = ""
+        end
+
+        table.insert(buttons, {button = button, keyBox = keyBox})
         yOffset = yOffset + 40
     end
+
+    game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+        if gp then return end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            for emoteId, keyCode in pairs(emoteKeybinds) do
+                if input.KeyCode == keyCode then
+                    toggleFakeAnimation(emoteId)
+                end
+            end
+        end
+    end)
 
     local searchBox = G2L["a"]
     searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local searchText = searchBox.Text:lower()
         yOffset = 10
 
-        for _, button in ipairs(buttons) do
+        for _, pair in ipairs(buttons) do
+            local button = pair.button
+            local keyBox = pair.keyBox
             if button.Name:lower():find(searchText) then
                 button.Visible = true
-                button.Position = UDim2.new(0, 8, 0, yOffset)
+                keyBox.Visible = true
+                button.Position = UDim2.new(0, 48, 0, yOffset)
+                keyBox.Position = UDim2.new(0, 8, 0, yOffset)
                 yOffset = yOffset + 40
             else
                 button.Visible = false
+                keyBox.Visible = false
             end
         end
 
@@ -1545,10 +1513,6 @@ local function addButtonsToFrame()
     scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset)
 end
 
--- Call it once to populate the emote list at startup
-addButtonsToFrame()
-
--- Create the Add Emote GUI and wire up the Add button
 local addEmotePopup = createAddEmoteGUI(G2L["1"], addButtonsToFrame)
 G2L["c"].MouseButton1Click:Connect(function()
     addEmotePopup.toggle()
@@ -1560,18 +1524,28 @@ G2L["1"].Destroying:Connect(function()
     end
 end)
 
--- Make the main GUI draggable
 local dragFrame = G2L["2"]
-local dragging, dragInput, dragStart, startPos
+local dragging = false
+local dragInput, dragStart, startPos
+local dragTween
+
+local function smoothDragTo(pos)
+    if dragTween then dragTween:Cancel() end
+    dragTween = TweenService:Create(
+        dragFrame,
+        TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        {Position = pos}
+    )
+    dragTween:Play()
+end
 
 dragFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not isDraggingSlider then
         dragging = true
         dragStart = input.Position
         startPos = dragFrame.Position
 
         input.Changed:Connect(function()
-
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
             end
@@ -1586,13 +1560,16 @@ dragFrame.InputChanged:Connect(function(input)
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
+    if input == dragInput and dragging and not isDraggingSlider then
         local delta = input.Position - dragStart
-        dragFrame.Position = UDim2.new(
+        local goal = UDim2.new(
             startPos.X.Scale, startPos.X.Offset + delta.X,
             startPos.Y.Scale, startPos.Y.Offset + delta.Y
         )
+        smoothDragTo(goal)
     end
 end)
+
+addButtonsToFrame()
 
 return G2L["1"], require;
