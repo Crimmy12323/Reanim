@@ -1253,8 +1253,11 @@ local function addButtonsToFrame()
         {"Twerk", "77493234914180", false},
         {"Back Shot", "104625684132073", false},
         {"Lap Dance", "93816795776514", false},
-        {"Running Meme", "124138007910724", false},
-        {"Running Meme Twerk", "83523061911331", false},
+        {"Runaway", "124138007910724", false},
+        {"Runaway Twerk", "83523061911331", false},
+        {"Give Head (Goofy Edition)", "118753756727960", false},
+        {"Twerk On The Floor", "97412783228774", false},
+        {"Scissoring", "135771690782346", false},
         {"Fat Shit", "118865365595523", false}
     }
 
