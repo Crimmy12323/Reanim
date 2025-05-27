@@ -423,12 +423,12 @@ local function playFakeAnimation(animationId)
                     end
 
                     local frameLength = (nextTime - currentTime) / fakeAnimSpeed
-                    local elapsed = 0
+                    local startTime = os.clock()
+                    local endTime = startTime + frameLength
 
-                    while elapsed < frameLength and not fakeAnimStop do
-                        local dt = RunService.Heartbeat:Wait()
-                        elapsed = elapsed + dt
-                        local alpha = math.clamp(elapsed / frameLength, 0, 1)
+                    while os.clock() < endTime and not fakeAnimStop do
+                        local now = os.clock()
+                        local alpha = math.clamp((now - startTime) / frameLength, 0, 1)
 
                         pcall(function()
                             for _, currentPose in pairs(currentFrame:GetDescendants()) do
@@ -442,6 +442,7 @@ local function playFakeAnimation(animationId)
                                 end
                             end
                         end)
+                        RunService.Heartbeat:Wait()
                     end
                 end
             end)
