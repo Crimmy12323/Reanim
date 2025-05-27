@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
+-- [[ State for reanimation ]]
 local ghostEnabled = false
 local originalCharacter
 local ghostClone
@@ -26,6 +27,7 @@ local bodyParts = {
     "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }
 
+-- [[ Adjusts the clone so its lowest part is on the ground ]]
 local function adjustCloneToGround(clone)
     if not clone then return end
     local lowestY = math.huge
@@ -47,6 +49,7 @@ local function adjustCloneToGround(clone)
     end
 end
 
+-- [[ Prevent GUI loss on respawn ]]
 local preservedGuis = {}
 local function preserveGuis()
     local playerGui = LocalPlayer:FindFirstChildWhichIsA("PlayerGui")
@@ -69,6 +72,7 @@ local function restoreGuis()
     table.clear(preservedGuis)
 end
 
+-- [[ Update clone scale for size/width sliders ]]
 local function updateCloneScale()
     if not ghostClone then return end
     for part, origSize in pairs(ghostOriginalSizes) do
@@ -103,6 +107,7 @@ local function updateCloneScale()
     adjustCloneToGround(ghostClone)
 end
 
+-- [[ Copy ragdoll part positions from clone to original ]]
 local function updateRagdolledParts()
     if not ghostEnabled or not originalCharacter or not ghostClone then return end
     for _, partName in ipairs(bodyParts) do
@@ -116,6 +121,7 @@ local function updateRagdolledParts()
     end
 end
 
+-- [[ Main function to enable/disable ghost reanimation ]]
 local function setGhostEnabled(newState)
     ghostEnabled = newState
 
@@ -156,6 +162,7 @@ local function setGhostEnabled(newState)
             end
         end
 
+        -- [[ Make clone invisible ]]
         for _, part in ipairs(ghostClone:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.Transparency = 1
@@ -170,6 +177,7 @@ local function setGhostEnabled(newState)
             end
         end
 
+        -- [[ Store original sizes and motor CFrames for scaling ]]
         ghostOriginalSizes = {}
         ghostOriginalMotorCFrames = {}
         for _, desc in ipairs(ghostClone:GetDescendants()) do
@@ -206,6 +214,7 @@ local function setGhostEnabled(newState)
             originalAnimateScript.Disabled = false
         end
 
+        -- [[ Start ragdoll sync ]]
         task.delay(0, function()
             if not ghostEnabled then return end
             ReplicatedStorage.RagdollEvent:FireServer()
@@ -243,6 +252,8 @@ local function setGhostEnabled(newState)
 
         if origRoot then
             origRoot.CFrame = targetCFrame
+            origRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            origRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         end
 
         local origHumanoid = originalCharacter:FindFirstChildWhichIsA("Humanoid")
@@ -250,6 +261,19 @@ local function setGhostEnabled(newState)
         LocalPlayer.Character = originalCharacter
         if origHumanoid then
             Workspace.CurrentCamera.CameraSubject = origHumanoid
+            origHumanoid.PlatformStand = false
+            origHumanoid:ChangeState(Enum.HumanoidStateType.Running)
+            origHumanoid.Sit = false
+            origHumanoid.Jump = true
+            task.wait(0.03)
+            origHumanoid.Jump = false
+            -- Reset all part velocities
+            for _, part in ipairs(originalCharacter:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                end
+            end
         end
         restoreGuis()
 
@@ -263,6 +287,7 @@ local function setGhostEnabled(newState)
     end
 end
 
+-- [[ Animation playback logic (fake animation system) ]]
 local fakeAnimStop
 local fakeAnimRunning = false
 fakeAnimStop = false
@@ -292,6 +317,7 @@ local function stopFakeAnimation()
     end
 end
 
+-- [[ Play a fake animation on the ghost clone using keyframes ]]
 local function playFakeAnimation(animationId)
     if not ghostClone then
         warn("No fake character available!")
@@ -299,6 +325,8 @@ local function playFakeAnimation(animationId)
     end
     if animationId == "" then return end
     if fakeAnimRunning then
+        stopFakeAnimation()
+        task.wait(0.01)
         stopFakeAnimation()
     end
     wait(0.1)
@@ -358,6 +386,7 @@ local function playFakeAnimation(animationId)
     fakeAnimStop = false
     fakeAnimRunning = true
     
+    -- [[ PlatformStand trick to prevent physics glitches ]]
     local part = Instance.new("Part")
     part.Size = Vector3.new(2048,0.1,2048)
     part.Anchored = true
@@ -375,62 +404,66 @@ local function playFakeAnimation(animationId)
     part:Destroy()
     spawn(function()
         while fakeAnimRunning do
-        if fakeAnimStop then
-            fakeAnimRunning = false
-            break
-        end
-
-        pcall(function()
-            local keyframes = NeededAssets:GetKeyframes()
-            for ii = 1, #keyframes do
-            if fakeAnimStop then break end
-
-            local currentFrame = keyframes[ii]
-            local nextFrame = keyframes[ii + 1] or keyframes[1]
-            local currentTime = currentFrame.Time
-            local nextTime = nextFrame.Time
-            if nextTime <= currentTime then
-                nextTime = nextTime + NeededAssets.Length
+            if fakeAnimStop then
+                fakeAnimRunning = false
+                break
             end
 
-            local frameLength = (nextTime - currentTime) / fakeAnimSpeed
-            local startTime = tick()
-            
-            while tick() - startTime < frameLength and not fakeAnimStop do
-                local alpha = (tick() - startTime) / frameLength
-                
-                pcall(function()
-                for _, currentPose in pairs(currentFrame:GetDescendants()) do
-                    local nextPose = nextFrame:FindFirstChild(currentPose.Name, true)
-                    local motor = Joints[currentPose.Name]
-                    
-                    if motor and nextPose and ghostOriginalMotorCFrames[motor] then
-                    local currentCF = ghostOriginalMotorCFrames[motor].C0 * currentPose.CFrame
-                    local nextCF = ghostOriginalMotorCFrames[motor].C0 * nextPose.CFrame
-                    motor.C0 = currentCF:Lerp(nextCF, alpha)
+            pcall(function()
+                local keyframes = NeededAssets:GetKeyframes()
+                for ii = 1, #keyframes do
+                    if fakeAnimStop then break end
+
+                    local currentFrame = keyframes[ii]
+                    local nextFrame = keyframes[ii + 1] or keyframes[1]
+                    local currentTime = currentFrame.Time
+                    local nextTime = nextFrame.Time
+                    if nextTime <= currentTime then
+                        nextTime = nextTime + NeededAssets.Length
+                    end
+
+                    local frameLength = (nextTime - currentTime) / fakeAnimSpeed
+                    local elapsed = 0
+
+                    while elapsed < frameLength and not fakeAnimStop do
+                        local dt = RunService.Heartbeat:Wait()
+                        elapsed = elapsed + dt
+                        local alpha = math.clamp(elapsed / frameLength, 0, 1)
+
+                        pcall(function()
+                            for _, currentPose in pairs(currentFrame:GetDescendants()) do
+                                local nextPose = nextFrame:FindFirstChild(currentPose.Name, true)
+                                local motor = Joints[currentPose.Name]
+
+                                if motor and nextPose and ghostOriginalMotorCFrames[motor] then
+                                    local currentCF = ghostOriginalMotorCFrames[motor].C0 * currentPose.CFrame
+                                    local nextCF = ghostOriginalMotorCFrames[motor].C0 * nextPose.CFrame
+                                    motor.C0 = currentCF:Lerp(nextCF, alpha)
+                                end
+                            end
+                        end)
                     end
                 end
-                end)
-                
-                RunService.RenderStepped:Wait()
-            end
-            end
-        end)
-        
-        task.wait(0.03)
+            end)
+
+            task.wait(0.03)
         end
     end)
-end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if gameProcessedEvent then return end
 
     if input.KeyCode == Enum.KeyCode.R then
         stopFakeAnimation()
+        task.wait(0.01)
+        stopFakeAnimation()
         return
     end
 end)
 
+end
+
+-- [[ Listen for character respawn and cleanup ghost if needed ]]
 LocalPlayer = Players.LocalPlayer
 
 LocalPlayer.CharacterAdded:Connect(function(character)
@@ -449,6 +482,7 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     end
 end)
 
+-- [[ GUI Logic]]
 local G2L = {};
 
 G2L["1"] = Instance.new("ScreenGui", game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"))
@@ -859,6 +893,10 @@ if G2L["1b"].Text:lower() == "disable r15 reanimation" then
     G2L["1b"].TextColor3 = Color3.fromRGB(171, 27, 27)
 end
 
+if G2L["1b"].Text:lower() == "enable r15 reanimation" then
+    G2L["1b"].TextColor3 = Color3.fromRGB(207, 207, 207)
+end
+
 G2L["1c"].MouseButton1Click:Connect(function()
     if ghostEnabled then
         setGhostEnabled(false)
@@ -882,11 +920,15 @@ local function toggleFakeAnimation(animationId)
 
     if currentPlayingAnimation == animationId then
         stopFakeAnimation()
+        task.wait(0.01)
+        stopFakeAnimation()
         currentPlayingAnimation = nil
         return
     end
 
     if currentPlayingAnimation then
+        stopFakeAnimation()
+        task.wait(0.01)
         stopFakeAnimation()
     end
 
