@@ -1240,7 +1240,10 @@ local function addButtonsToFrame()
         {"Give Head (Goofy Edition)", "118753756727960", false},
         {"Twerk On The Floor", "97412783228774", false},
         {"Scissoring", "135771690782346", false},
-        {"Assumptions!", "98653233606495", true},
+        {"Assumptions", "98653233606495", true},
+        {"Assumptions R15", "100885689396978", false},
+        {"Distraction Dance", "100885689396978", false},
+        {"Peanut Butter JT", "71347001855728", true},
         {"Fat Shit", "118865365595523", false}
     }
 
