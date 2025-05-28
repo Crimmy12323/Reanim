@@ -122,7 +122,14 @@ local function updateRagdolledParts()
 end
 
 -- [[ Main function to enable/disable ghost reanimation ]]
+local reanimCooldown = 0.6
+local lastReanimToggle = 0
+
 local function setGhostEnabled(newState)
+    if tick() - lastReanimToggle < reanimCooldown then
+        return
+    end
+    lastReanimToggle = tick()
     ghostEnabled = newState
 
     if ghostEnabled then
@@ -233,9 +240,9 @@ local function setGhostEnabled(newState)
 
         if not originalCharacter or not ghostClone then return end
 
-        for i = 1, 3 do
+        for i = 1, 2 do
             ReplicatedStorage.UnragdollEvent:FireServer()
-            task.wait(0.1)
+            task.wait(0.01)
         end
 
         local origRoot = originalCharacter:FindFirstChild("HumanoidRootPart")
@@ -262,17 +269,19 @@ local function setGhostEnabled(newState)
         if origHumanoid then
             Workspace.CurrentCamera.CameraSubject = origHumanoid
             origHumanoid.PlatformStand = false
-            origHumanoid:ChangeState(Enum.HumanoidStateType.Running)
             origHumanoid.Sit = false
-            origHumanoid.Jump = true
-            task.wait(0.03)
-            origHumanoid.Jump = false
-            -- Reset all part velocities
-            for _, part in ipairs(originalCharacter:GetChildren()) do
+            origHumanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            task.wait(0.06)
+            origHumanoid:ChangeState(Enum.HumanoidStateType.Running)
+            for _, part in ipairs(originalCharacter:GetDescendants()) do
                 if part:IsA("BasePart") then
                     part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
                 end
+            end
+            local origRoot = originalCharacter:FindFirstChild("HumanoidRootPart")
+            if origRoot then
+                origRoot.CFrame = targetCFrame
             end
         end
         restoreGuis()
@@ -1288,7 +1297,9 @@ local function addButtonsToFrame()
         {"Big Swastika", "94631359696320", false},
         {"Distraction Dance", "100885689396978", false},
         {"Peanut Butter JT", "71347001855728", true},
-        {"Fat Shit", "118865365595523", false}
+        {"Fat Shit", "118865365595523", false},
+        {"Car Shearer", "7214158794", false},
+        {"Pump The Jam", "7932729883", false},
     }
 
     for _, custom in ipairs(loadedAnimations.custom or {}) do
@@ -1611,6 +1622,8 @@ end)
 
 local guiVisible = true
 local toggleKey = Enum.KeyCode.N
+
+
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
