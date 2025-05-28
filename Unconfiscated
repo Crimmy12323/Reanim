@@ -122,14 +122,7 @@ local function updateRagdolledParts()
 end
 
 -- [[ Main function to enable/disable ghost reanimation ]]
-local reanimCooldown = 0.6
-local lastReanimToggle = 0
-
 local function setGhostEnabled(newState)
-    if tick() - lastReanimToggle < reanimCooldown then
-        return
-    end
-    lastReanimToggle = tick()
     ghostEnabled = newState
 
     if ghostEnabled then
@@ -1622,8 +1615,6 @@ end)
 
 local guiVisible = true
 local toggleKey = Enum.KeyCode.N
-
-
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
