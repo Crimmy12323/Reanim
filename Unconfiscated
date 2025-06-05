@@ -57,28 +57,6 @@ do
     end)
 end
 
--- [[ Adjusts the clone so its lowest part is on the ground ]]
-local function adjustCloneToGround(clone)
-    if not clone then return end
-    local lowestY = math.huge
-    for _, part in ipairs(clone:GetDescendants()) do
-        if part:IsA("BasePart") then
-            local bottomY = part.Position.Y - (part.Size.Y * 0.5)
-            if bottomY < lowestY then
-                lowestY = bottomY
-            end
-        end
-    end
-    local offset = 0 - lowestY
-    if offset > 0 then
-        if clone.PrimaryPart then
-            clone:SetPrimaryPartCFrame(clone.PrimaryPart.CFrame + Vector3.new(0, offset, 0))
-        else
-            clone:TranslateBy(Vector3.new(0, offset, 0))
-        end
-    end
-end
-
 -- [[ Prevent GUI loss on respawn ]]
 local preservedGuis = {}
 local function preserveGuis()
@@ -133,8 +111,6 @@ local function updateCloneScale()
     if ghostHumanoid and ghostOriginalHipHeight then
         ghostHumanoid.HipHeight = ghostOriginalHipHeight * cloneSize
     end
-
-    adjustCloneToGround(ghostClone)
 end
 
 -- [[ Copy ragdoll part positions from clone to original ]]
@@ -231,8 +207,6 @@ local function setGhostEnabled(newState)
 
         preserveGuis()
         ghostClone.Parent = originalCharacter.Parent
-
-        adjustCloneToGround(ghostClone)
 
         LocalPlayer.Character = ghostClone
         if ghostHumanoid then
@@ -1595,5 +1569,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 addButtonsToFrame()
+
+local addGUI = createAddEmoteGUI(G2L["1"], addButtonsToFrame)
+G2L["c"].MouseButton1Click:Connect(function()
+    addGUI.toggle()
+end)
 
 return G2L["1"], require;
