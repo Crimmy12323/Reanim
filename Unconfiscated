@@ -27,6 +27,36 @@ local bodyParts = {
     "RightUpperLeg", "RightLowerLeg", "RightFoot"
 }
 
+--// do this first so it's ready to use :P
+local _storage_clone = nil
+local function _get_c()
+    return game:GetService("Players").LocalPlayer.Character
+end
+
+do
+    local char = _get_c()
+    char.Archivable = true
+
+    _storage_clone = char:Clone()
+
+    for _, obj in ipairs(_storage_clone:GetDescendants()) do
+        if obj:IsA("ForceField") then
+            obj:Destroy()
+        end
+    end
+
+    _storage_clone.Name = "temp"
+    _storage_clone.Parent = game.Lighting
+
+    game:GetService("RunService").RenderStepped:Connect(function()
+        local realRoot = char:FindFirstChild("HumanoidRootPart")
+        local cloneRoot = _storage_clone:FindFirstChild("HumanoidRootPart")
+        if realRoot and cloneRoot then
+            cloneRoot.CFrame = realRoot.CFrame
+        end
+    end)
+end
+
 -- [[ Adjusts the clone so its lowest part is on the ground ]]
 local function adjustCloneToGround(clone)
     if not clone then return end
@@ -143,7 +173,7 @@ local function setGhostEnabled(newState)
         originalCFrame = root.CFrame
 
         char.Archivable = true
-        ghostClone = char:Clone()
+        ghostClone = _storage_clone:Clone()
         char.Archivable = false
 
         local originalName = originalCharacter.Name
@@ -1498,6 +1528,69 @@ globalKeybindConnection = game:GetService("UserInputService").InputBegan:Connect
                 toggleFakeAnimation(emoteId)
             end
         end
+    end
+end)
+
+local dragFrame = G2L["4"]
+local mainFrame = G2L["2"]
+local dragging = false
+local dragInput, dragStart, startPos
+local dragTween
+
+local initialOffset
+
+dragFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not isDraggingSlider then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        
+        initialOffset = startPos - UDim2.new(0, input.Position.X, 0, input.Position.Y)
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+dragFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging and not isDraggingSlider then
+        if not dragStart or not startPos then
+            dragging = false
+            return
+        end
+        
+        local newPos = UDim2.new(
+            0, input.Position.X + initialOffset.X.Offset,
+            0, input.Position.Y + initialOffset.Y.Offset
+        )
+        
+        if dragTween then dragTween:Cancel() end
+        dragTween = TweenService:Create(
+            mainFrame,
+            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Position = newPos}
+        )
+        dragTween:Play()
+    end
+end)
+
+local guiVisible = true
+local toggleKey = Enum.KeyCode.N
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == toggleKey then
+        guiVisible = not guiVisible
+        G2L["1"].Enabled = guiVisible
     end
 end)
 
