@@ -131,19 +131,13 @@ end
 local function setGhostEnabled(newState)
     ghostEnabled = newState
 
-    if ghostEnabled then
+    if newState then
         local char = LocalPlayer.Character
-        if not char then
-            warn("No character found!")
-            return
-        end
+        if not char then warn("No character found!") return end
 
         local humanoid = char:FindFirstChildWhichIsA("Humanoid")
         local root = char:FindFirstChild("HumanoidRootPart")
-        if not humanoid or not root then
-            warn("Character is missing either Humanoid or HumanoidRootPart!")
-            return
-        end
+        if not humanoid or not root then warn("Missing Humanoid or Root!") return end
 
         originalCharacter = char
         originalCFrame = root.CFrame
@@ -152,7 +146,7 @@ local function setGhostEnabled(newState)
         ghostClone = _storage_clone:Clone()
         char.Archivable = false
 
-        local originalName = originalCharacter.Name
+        local originalName = char.Name
         ghostClone.Name = originalName .. "_clone"
 
         local ghostHumanoid = ghostClone:FindFirstChildWhichIsA("Humanoid")
@@ -163,27 +157,19 @@ local function setGhostEnabled(newState)
 
         if not ghostClone.PrimaryPart then
             local hrp = ghostClone:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                ghostClone.PrimaryPart = hrp
-            end
+            if hrp then ghostClone.PrimaryPart = hrp end
         end
 
-        -- [[ Make clone invisible ]]
         for _, part in ipairs(ghostClone:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Transparency = 1
-            end
+            if part:IsA("BasePart") then part.Transparency = 1 end
         end
         local head = ghostClone:FindFirstChild("Head")
         if head then
-            for _, child in ipairs(head:GetChildren()) do
-                if child:IsA("Decal") then
-                    child.Transparency = 1
-                end
+            for _, d in ipairs(head:GetChildren()) do
+                if d:IsA("Decal") then d.Transparency = 1 end
             end
         end
 
-        -- [[ Store original sizes and motor CFrames for scaling ]]
         ghostOriginalSizes = {}
         ghostOriginalMotorCFrames = {}
         for _, desc in ipairs(ghostClone:GetDescendants()) do
@@ -201,28 +187,28 @@ local function setGhostEnabled(newState)
         local animate = originalCharacter:FindFirstChild("Animate")
         if animate then
             originalAnimateScript = animate
-            originalAnimateScript.Disabled = true
-            originalAnimateScript.Parent = ghostClone
+            animate.Disabled = true
+            animate.Parent = ghostClone
         end
 
         preserveGuis()
         ghostClone.Parent = originalCharacter.Parent
-
         LocalPlayer.Character = ghostClone
+
         if ghostHumanoid then
             Workspace.CurrentCamera.CameraSubject = ghostHumanoid
         end
         restoreGuis()
 
-        if originalAnimateScript then
-            originalAnimateScript.Disabled = false
-        end
+        if originalAnimateScript then originalAnimateScript.Disabled = false end
 
-        -- [[ Start ragdoll sync ]]
         task.delay(0, function()
             if not ghostEnabled then return end
-            local ohString1 = "Ball"
-            ReplicatedStorage.Ragdoll:FireServer(ohString1)
+            if game.PlaceId == 6884319169 then
+                ReplicatedStorage.Ragdoll:FireServer("Ball")
+            else
+                ReplicatedStorage.Events.RagdollState:FireServer("true")
+            end
             task.delay(0, function()
                 if not ghostEnabled then return end
                 if updateConnection then updateConnection:Disconnect() end
@@ -231,15 +217,16 @@ local function setGhostEnabled(newState)
         end)
 
     else
-        if updateConnection then
-            updateConnection:Disconnect()
-            updateConnection = nil
-        end
-
+        if updateConnection then updateConnection:Disconnect() updateConnection = nil end
         if not originalCharacter or not ghostClone then return end
 
         for i = 1, 2 do
-            ReplicatedStorage.Unragdoll:FireServer()
+            if game.PlaceId == 6884319169 then
+                ReplicatedStorage.Unragdoll:FireServer()
+            else
+                local obBoolen1 = "false"
+                ReplicatedStorage.Events.RagdollState:FireServer("obBoolen1")
+            end
             task.wait(0.01)
         end
 
@@ -257,8 +244,8 @@ local function setGhostEnabled(newState)
 
         if origRoot then
             origRoot.CFrame = targetCFrame
-            origRoot.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            origRoot.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            origRoot.AssemblyLinearVelocity = Vector3.zero
+            origRoot.AssemblyAngularVelocity = Vector3.zero
         end
 
         local origHumanoid = originalCharacter:FindFirstChildWhichIsA("Humanoid")
@@ -273,14 +260,11 @@ local function setGhostEnabled(newState)
             origHumanoid:ChangeState(Enum.HumanoidStateType.Running)
             for _, part in ipairs(originalCharacter:GetDescendants()) do
                 if part:IsA("BasePart") then
-                    part.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                    part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+                    part.AssemblyLinearVelocity = Vector3.zero
+                    part.AssemblyAngularVelocity = Vector3.zero
                 end
             end
-            local origRoot = originalCharacter:FindFirstChild("HumanoidRootPart")
-            if origRoot then
-                origRoot.CFrame = targetCFrame
-            end
+            if origRoot then origRoot.CFrame = targetCFrame end
         end
         restoreGuis()
 
