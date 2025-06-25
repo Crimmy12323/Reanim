@@ -5,7 +5,17 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local LocalPlayer = Players.LocalPlayer
+
+-- Wait for the game to load and player to be available
+local function waitForPlayer()
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+    
+    return Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+end
+
+local LocalPlayer = waitForPlayer()
 
 -- [[ State for reanimation ]]
 local ghostEnabled = false
@@ -83,25 +93,37 @@ end
 -- [[ Update clone scale for size/width sliders ]]
 local function updateCloneScale()
     if not ghostClone then return end
+    
     for part, origSize in pairs(ghostOriginalSizes) do
         if part and part:IsA("BasePart") then
-            part.Size = Vector3.new(origSize.X * cloneSize * cloneWidth, origSize.Y * cloneSize, origSize.Z * cloneSize)
+            local isMainTorso = part.Name == "UpperTorso" or part.Name == "LowerTorso"
+            part.Size = Vector3.new(
+                origSize.X * (isMainTorso and cloneWidth or cloneSize),
+                origSize.Y * cloneSize, 
+                origSize.Z * cloneSize
+            )
         end
     end
+
     for motor, orig in pairs(ghostOriginalMotorCFrames) do
         if motor and motor:IsA("Motor6D") then
             local c0 = orig.C0
             local c1 = orig.C1
+            
+            local isSideAttachment = motor.Name:find("Left") or motor.Name:find("Right")
+            
             local newC0 = CFrame.new(
-                c0.Position.X * cloneSize * cloneWidth,
+                c0.Position.X * (isSideAttachment and cloneWidth or cloneSize),
                 c0.Position.Y * cloneSize,
                 c0.Position.Z * cloneSize
             ) * CFrame.Angles(c0:ToEulerAnglesXYZ())
+            
             local newC1 = CFrame.new(
-                c1.Position.X * cloneSize * cloneWidth,
+                c1.Position.X * cloneSize,
                 c1.Position.Y * cloneSize,
                 c1.Position.Z * cloneSize
             ) * CFrame.Angles(c1:ToEulerAnglesXYZ())
+            
             motor.C0 = newC0
             motor.C1 = newC1
         end
@@ -1036,14 +1058,14 @@ local function createAddEmoteGUI(parentGUI, refreshCallback)
 
     local lastMousePos
     local lastGoalPos
-    local DRAG_SPEED = 15
+    local dragspeed = 15
 
     local function Update(dt)
         if not startPos then return end
         if not dragging and lastGoalPos then
             addEmoteFrame.Position = UDim2.new(
-                startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, lastGoalPos.X.Offset, dt * DRAG_SPEED),
-                startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, lastGoalPos.Y.Offset, dt * DRAG_SPEED)
+                startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, lastGoalPos.X.Offset, dt * dragspeed),
+                startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, lastGoalPos.Y.Offset, dt * dragspeed)
             )
             return
         end
@@ -1053,8 +1075,8 @@ local function createAddEmoteGUI(parentGUI, refreshCallback)
         local yGoal = startPos.Y.Offset - delta.Y
         lastGoalPos = UDim2.new(startPos.X.Scale, xGoal, startPos.Y.Scale, yGoal)
         addEmoteFrame.Position = UDim2.new(
-            startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, xGoal, dt * DRAG_SPEED),
-            startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, yGoal, dt * DRAG_SPEED)
+            startPos.X.Scale, Lerp(addEmoteFrame.Position.X.Offset, xGoal, dt * dragspeed),
+            startPos.Y.Scale, Lerp(addEmoteFrame.Position.Y.Offset, yGoal, dt * dragspeed)
         )
     end
 
@@ -1242,7 +1264,7 @@ local function addButtonsToFrame()
         {"Infinite Dab", "74538409545244"},
         {"Jabba Switchway", "8229514367", false},
         {"Jubi Slide", "16570530493", false},
-        {"Lucid Dream", "108895351743195", false},
+        {"Lucid Dreams", "108895351743195", false},
         {"Look At Me", "129004554500202", false},
         {"Mr Blue Sky", "8603017969", false},
         {"Maximum Bounce", "8703876822", false},
@@ -1294,7 +1316,8 @@ local function addButtonsToFrame()
         {"Big Swastika", "94631359696320", false},
         {"Distraction Dance", "100885689396978", false},
         {"Peanut Butter JT", "71347001855728", true},
-        {"Fat Shit", "118865365595523", false},
+        {"EOYP FN", "95030874860037", false},
+        {"Lucid Dreams FN", "118481150583570", false},
         {"Car Shearer", "7214158794", false},
         {"Pump The Jam", "7932729883", false},
     }
@@ -1317,7 +1340,7 @@ local function addButtonsToFrame()
         local keyBox = Instance.new("TextBox", scrollingFrame)
         keyBox.Name = "KeybindBox"
         keyBox.Size = UDim2.new(0, 32, 0, 32)
-        keyBox.Position = UDim2.new(0, 8, 0, yOffset)
+        keyBox.Position = UDim2.new(0, 12, 0, yOffset)
         keyBox.BackgroundColor3 = Color3.fromRGB(35, 35, 39)
         keyBox.Text = ""
         keyBox.TextSize = 14
@@ -1387,7 +1410,7 @@ local function addButtonsToFrame()
         local button = Instance.new("TextButton", scrollingFrame)
         button.Name = emoteName
         button.Size = UDim2.new(1, -68, 0, 32)
-        button.Position = UDim2.new(0, 48, 0, yOffset)
+        button.Position = UDim2.new(0, 52, 0, yOffset)
         button.BackgroundColor3 = Color3.fromRGB(31, 31, 35)
         button.Text = emoteName
         button.TextSize = 17
@@ -1437,6 +1460,9 @@ local function addButtonsToFrame()
             if emoteName == "Runaway" then
                 currentValue = 0.1
                 updateSlider(currentValue)
+            elseif emoteName == "Lucid Dream FN" or emoteName == "EOYP FN" then
+                currentValue = 1.4
+                updateSlider(currentValue)
             else
                 currentValue = 1.1
                 updateSlider(currentValue)
@@ -1460,8 +1486,8 @@ local function addButtonsToFrame()
             if button.Name:lower():find(searchText) then
                 button.Visible = true
                 keyBox.Visible = true
-                button.Position = UDim2.new(0, 48, 0, yOffset)
-                keyBox.Position = UDim2.new(0, 8, 0, yOffset)
+                button.Position = UDim2.new(0, 52, 0, yOffset)
+                keyBox.Position = UDim2.new(0, 12, 0, yOffset)
                 yOffset = yOffset + 40
             else
                 button.Visible = false
@@ -1559,4 +1585,4 @@ G2L["c"].MouseButton1Click:Connect(function()
     addGUI.toggle()
 end)
 
-return G2L["1"], require;
+return G2L["1"], require
