@@ -1319,6 +1319,7 @@ local function addButtonsToFrame()
         {"EOYP FN", "95030874860037", false},
         {"Lucid Dreams FN", "118481150583570", false},
         {"Car Shearer", "7214158794", false},
+        {"James Dance", "116705115784027", false},
         {"Pump The Jam", "7932729883", false},
     }
 
